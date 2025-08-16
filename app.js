@@ -136,7 +136,11 @@ function runTrial(trial, indexInBlock){
     scenarioBox.style.display = "block";
     await showScenarioLines(trial.lines);
 
-    showAnswers(trial.options);
+    const shownOpts = Math.random() < 0.5
+  ? trial.options
+  : [trial.options[1], trial.options[0]];
+
+    showAnswers(shownOpts);
     choiceIdx = null; confidenceVal = null;
     rtChoiceStart = performance.now();
 
@@ -174,7 +178,7 @@ function runTrial(trial, indexInBlock){
         answersBox.style.display = "none";
 
         if(trial.record){
-          const chosen = trial.options[choiceIdx];
+          const chosen = shownOpts[choiceIdx];
           const rec = {
             timestamp_iso: new Date().toISOString(),
             participant_id: participantId,
