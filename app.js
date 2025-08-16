@@ -8,6 +8,7 @@ const cssVar = (name, fallback) => (getComputedStyle(document.documentElement).g
 // ---------- cache DOM ----------
 const screens = { instructions: $("#screen-instructions"), task: $("#screen-task"), results: $("#screen-results") };
 const fixation = $("#fixation");
+fixation.style.display = 'none';
 const scenarioBox = $("#scenario");
 const lines = [$("#line1"), $("#line2"), $("#line3"), $("#line4")];
 const answersBox = $("#answers");
@@ -21,8 +22,7 @@ const startBtn = $("#startBtn");
 const pidInput = $("#pid");
 
 function fixationShow() {
-  // display grid so CSS centers it; no layout jump
-  fixation.style.display = 'grid';
+  fixation.style.display = 'flex';   // use FLEX to match CSS
 }
 
 function fixationHide() {
@@ -132,10 +132,11 @@ function showAnswers(opts){
 }
 function hideAnswers(){ answersBox.style.display="none"; }
 function showConfidence(){
-  confBox.classList.remove("hidden");
-  requestAnimationFrame(()=> confBox.classList.add("show"));
+  confBox.classList.add("is-open");
 }
-function hideConfidence(){ confBox.classList.remove("show"); confBox.classList.add("hidden"); }
+function hideConfidence(){
+  confBox.classList.remove("is-open");
+}
 
 // ---------- trial flow ----------
 function runTrial(trial, indexInBlock){
