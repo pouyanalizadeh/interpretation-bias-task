@@ -199,6 +199,7 @@ function runTrial(trial, indexInBlock){
 
 // ---------- start / finish ----------
 async function startTask(){
+  // try to enter fullscreen (best effort)
   try {
     if (document.fullscreenElement == null) {
       await document.documentElement.requestFullscreen();
@@ -211,19 +212,34 @@ async function startTask(){
   showScreen("task");
   results = [];
 
-  // Practice first
-  for(let i=0;i<window.PRACTICE_TRIALS.length;i++){
-    await runTrial(window.PRACTICE_TRIALS[i], i+1);
-  }
+  let fatalErr = null;
 
-  // Main block
-  const order = shuffle(trials);
-  for(let j=0;j<order.length;j++){
-    const rec = await runTrial(order[j], j+1);
-    if(rec) results.push(rec);
-  }
+  try {
+    // Practice block (not recorded)
+    for(let i=0;i<window.PRACTICE_TRIALS.length;i++){
+      await runTrial(window.PRACTICE_TRIALS[i], i+1);
+    }
 
-  generateAndShowResults();
+    // Main block
+    const order = shuffle(trials);
+    for(let j=0;j<order.length;j++){
+      const rec = await runTrial(order[j], j+1);
+      if(rec) results.push(rec);
+    }
+  } catch (err) {
+    fatalErr = err;
+    console.error("Task error:", err);
+  } finally {
+    // Always show results, even if something failed mid-run
+    const summary = computeSummary(results);
+    renderResults(summary);
+    if (fatalErr) {
+      metaLine.textContent = `Session ${sessionId} — Note: an error occurred (${fatalErr.message}). Partial results shown.`;
+    } else {
+      metaLine.textContent = `Session ${sessionId}`;
+    }
+    showScreen("results");
+  }
 }
 
 // ---------- CSV/JSON ----------
