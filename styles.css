@@ -1,176 +1,117 @@
-/* ====== Base / Reset ====== */
+/* ================= Base ================= */
 *,
 *::before,
 *::after { box-sizing: border-box; }
 
-html, body {
-  height: 100%;
-}
+html, body { height: 100%; }
 
 :root{
-  --max-content-width: 900px;
-  --page-pad: clamp(12px, 3vw, 28px);
-  --card-radius: 18px;
-  --shadow: 0 10px 30px rgba(0,0,0,.08);
-  --bg: #0b0c10;          /* deep charcoal */
-  --ink: #e9eef2;         /* off-white text */
-  --muted: #a7b1b8;       /* muted text */
-  --primary: #5dd2ff;     /* accent */
-  --primary-ink: #051820;
-  --surface: #12141a;     /* cards/panels */
-  --surface-2: #171a22;   /* subtle contrast */
+  --maxw: 760px;                  /* max width of task content */
+  --pad: clamp(12px, 3vw, 28px);  /* page padding */
+  --radius: 16px;
+  --shadow: 0 10px 28px rgba(0,0,0,.08);
+
+  --bg:#0b0c10;
+  --surface:#12141a;
+  --surface-2:#171a22;
+  --ink:#e9eef2;
+  --muted:#a7b1b8;
+  --primary:#5dd2ff;
+  --primary-ink:#051820;
 }
 
+html { -webkit-text-size-adjust: 100%; } /* stop iOS from zooming text */
 body{
   margin: 0;
   background: var(--bg);
   color: var(--ink);
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
   line-height: 1.45;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ====== Screens layout ====== */
+/* ================= Screens ================= */
 .screen{
-  min-height: 100svh; /* supports mobile browser chrome */
-  padding: var(--page-pad);
+  min-height: 100svh;  /* mobile-safe viewport height */
+  padding: var(--pad);
   display: flex;
   align-items: center;
   justify-content: center;
 }
-.hidden{ display: none !important; }
-.show{ display: flex !important; }
+.hidden{ display:none!important; }
+.show{ display:flex!important; }
 
-/* ====== Cards / Common UI ====== */
 .card{
-  width: min(100%, var(--max-content-width));
+  width: min(100%, var(--maxw));
   background: var(--surface);
-  border-radius: var(--card-radius);
+  border-radius: var(--radius);
   box-shadow: var(--shadow);
-  padding: clamp(16px, 3.5vw, 36px);
+  padding: clamp(16px, 3.5vw, 32px);
 }
 
-h1,h2,h3{
-  margin: 0 0 .6em 0;
-  line-height: 1.2;
-}
+h1,h2,h3{ margin:0 0 .6em 0; line-height:1.2; }
 h1{ font-size: clamp(22px, 3.5vw, 34px); }
 h2{ font-size: clamp(18px, 3vw, 28px); }
 h3{ font-size: clamp(16px, 2.5vw, 22px); }
+p{ margin:.5em 0; }
+.muted{ color:var(--muted); }
 
-p{ margin: .5em 0; }
-.muted{ color: var(--muted); }
-
-label.label{
-  display: block;
-  font-size: 0.95rem;
-  color: var(--muted);
-  margin-top: .75rem;
-}
+label.label{ display:block; margin-top:.75rem; color:var(--muted); }
 input#pid{
-  width: 260px;
-  max-width: 100%;
+  width: 260px; max-width: 100%;
   padding: .6rem .8rem;
   border-radius: 10px;
   border: 1px solid #212633;
-  background: #0e1118;
-  color: var(--ink);
-  outline: none;
-  transition: border-color .15s ease;
+  background:#0e1118; color:var(--ink); outline: none;
 }
-input#pid:focus{ border-color: #2c8ab3; }
+input#pid:focus{ border-color:#2c8ab3; }
 
 button{
-  appearance: none;
-  border: 0;
-  border-radius: 12px;
-  padding: .8rem 1.1rem;
-  font-weight: 600;
-  cursor: pointer;
+  appearance:none; border:0; border-radius:12px;
+  padding:.85rem 1.1rem; font-weight:600; cursor:pointer;
 }
-button.primary{
-  background: var(--primary);
-  color: var(--primary-ink);
-}
-button.secondary{
-  background: var(--surface-2);
-  color: var(--ink);
-  border: 1px solid #222838;
-}
-.row{
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-top: 12px;
+button.primary{ background:var(--primary); color:var(--primary-ink); }
+button.secondary{ background:var(--surface-2); color:var(--ink); border:1px solid #222838; }
+.row{ display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; }
+
+/* ================= Task Layout (single column everywhere) ================= */
+#screen-task{ align-items: stretch; }
+.task-wrap{
+  width: min(100%, var(--maxw));
+  margin-inline:auto;
+  display:flex;
+  flex-direction: column;  /* scenario -> answers under it */
+  gap: clamp(10px, 2vh, 16px);
 }
 
-/* ====== Task Screen Layout ====== */
-/* We use a column layout that reserves vertical space for scenario & answers
-   so they never overlap (answers can also stick to the bottom on phones). */
-#screen-task{
-  align-items: stretch;
-  justify-content: stretch;
-}
-
-#screen-task > div,
-#screen-task .scenario,
-#screen-task .answers{
-  width: min(100%, var(--max-content-width));
-  margin-inline: auto;
-}
-
-/* Fixation sits centered over everything when shown */
+/* fixation: centered + safe on iOS/Safari */
 #fixation{
-  position: fixed;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  font-size: clamp(28px, 7vw, 62px);
-  font-weight: 700;
-  color: var(--muted);
-  pointer-events: none;
-  z-index: 2;
+  position: fixed; inset: 0; display:grid; place-items:center;
+  font-size: clamp(28px, 7vw, 62px); font-weight:700; color:var(--muted);
+  pointer-events:none; z-index: 3;
 }
 
-/* Scenario block */
+/* Scenario block never changes height so text doesn’t jump */
 .scenario{
-  /* reserve generous vertical space so lines don't jump */
-  min-height: clamp(220px, 48svh, 420px);
-  display: flex;
-  align-items: center;     /* vertically center lines within the block */
-  justify-content: center;
-  text-align: center;
-  padding: clamp(10px, 2vw, 16px);
+  min-height: clamp(240px, 52svh, 460px); /* plenty of space on phones */
+  display:flex; align-items:center; justify-content:center;
+  text-align:center; padding: clamp(10px, 2vw, 16px);
 }
-
 .scenario .line{
   font-size: clamp(18px, 2.4vw, 24px);
   line-height: 1.35;
   margin: .25rem 0;
-  transition: opacity .2s ease;
 }
-.scenario .strong{
-  font-weight: 700;
-}
+.scenario .strong{ font-weight:700; }
 
-/* Answers never overlap scenario; they live in their own area.
-   On mobile they become sticky to the bottom for thumb reach. */
+/* Answers under scenario; no overlap */
 .answers{
-  display: flex;
-  gap: 12px;
-  justify-content: center;
-  margin-top: clamp(8px, 2vh, 16px);
-  padding-bottom: max(env(safe-area-inset-bottom), 8px);
-  position: sticky;
-  bottom: 0;
-  background: linear-gradient(180deg, rgba(11,12,16,0) 0%, rgba(11,12,16,.8) 40%, rgba(11,12,16,1) 100%);
-  padding-top: 12px;
-  z-index: 1;
+  display:flex; flex-direction: column; gap: 10px;
+  align-items: stretch;
 }
 .answer-btn{
-  flex: 1 1 260px;
-  max-width: 520px;
+  width: 100%;
   padding: 1rem 1.2rem;
   background: var(--surface-2);
   color: var(--ink);
@@ -180,16 +121,13 @@ button.secondary{
   box-shadow: var(--shadow);
 }
 
-/* ====== Confidence Modal (centered, not “too down”) ====== */
+/* ================= Confidence Modal (centered) ================= */
 .confidence{
-  position: fixed;
-  inset: 0;
+  position: fixed; inset: 0;
   background: rgba(0,0,0,.45);
-  display: grid;
-  place-items: center; /* centers vertically & horizontally */
+  display: grid; place-items: center;
   z-index: 5;
 }
-
 .conf-wrap{
   width: min(92vw, 520px);
   background: var(--surface);
@@ -198,64 +136,33 @@ button.secondary{
   box-shadow: var(--shadow);
   padding: clamp(16px, 3.5vw, 28px);
 }
-
-.conf-title{
-  font-size: clamp(18px, 2.4vw, 22px);
-  margin-bottom: .75rem;
-  text-align: center;
-}
-
-.conf-grid{
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 10px;
-}
+.conf-title{ text-align:center; font-size: clamp(18px, 2.4vw, 22px); margin-bottom:.75rem; }
+.conf-grid{ display:grid; grid-template-columns: repeat(5, 1fr); gap:10px; }
 .conf{
-  padding: .8rem 0;
-  font-size: clamp(16px, 2.2vw, 18px);
-  background: var(--surface-2);
-  color: var(--ink);
-  border: 1px solid #222838;
-  border-radius: 12px;
+  padding: .8rem 0; font-size: clamp(16px, 2.2vw, 18px);
+  background: var(--surface-2); color: var(--ink);
+  border: 1px solid #222838; border-radius: 12px;
 }
-.conf:focus,
-.conf:hover{
-  outline: 2px solid var(--primary);
-  outline-offset: 1px;
-}
+.conf:hover, .conf:focus{ outline:2px solid var(--primary); outline-offset:1px; }
 
-/* ====== Results styling (unchanged structurally, improved spacing) ====== */
+/* ================= Results ================= */
 .done-card{
   background: var(--surface-2);
-  padding: 14px;
-  border-radius: 14px;
-  border: 1px solid #222838;
+  padding: 14px; border-radius: 14px; border: 1px solid #222838;
 }
 .apa{
-  background: #0f141b;
-  color: #d9e3ea;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px solid #1e2433;
-  overflow-x: auto;
+  background:#0f141b; color:#d9e3ea;
+  padding: 12px; border-radius: 12px; border: 1px solid #1e2433; overflow-x:auto;
 }
 
-/* ====== Responsive Tweaks ====== */
-@media (max-width: 720px){
-  .answers{
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-  .answer-btn{
-    width: 100%;
-  }
-  /* bump scenario min-height a bit to avoid crowding when UI chrome is visible */
-  .scenario{ min-height: clamp(260px, 54svh, 520px); }
-}
-
-/* Ultra-small phones */
+/* ================= Tiny devices ================= */
 @media (max-width: 360px){
+  .scenario{ min-height: clamp(260px, 58svh, 520px); }
   .scenario .line{ font-size: clamp(16px, 5.2vw, 18px); }
+}
+
+/* ================= Desktop niceties (still single column) ================= */
+@media (min-width: 1024px){
+  .scenario{ min-height: clamp(320px, 42vh, 520px); }
 }
 
