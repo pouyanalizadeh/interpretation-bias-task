@@ -89,7 +89,7 @@ const trials = (window.SCENARIOS || []).map((s) => ({
 }));
 
 // ---------- state ----------
-let participantId = "anon"; // <- FIX: no pidInput
+let participantId = "anon"; // no PID input UI in current HTML
 let sessionId = makeSessionId();
 let fullscreenOK = 0;
 let deviceInfo = { userAgent: navigator.userAgent, width: window.innerWidth, height: window.innerHeight };
@@ -199,7 +199,9 @@ function runTrial(trial, indexInBlock){
 
 // ---------- start / finish ----------
 async function startTask(){
-  // try to enter fullscreen (best effort)
+  let fatalErr = null;
+
+  // best-effort fullscreen
   try {
     if (document.fullscreenElement == null) {
       await document.documentElement.requestFullscreen();
@@ -212,10 +214,8 @@ async function startTask(){
   showScreen("task");
   results = [];
 
-  let fatalErr = null;
-
   try {
-    // Practice block (not recorded)
+    // Practice first
     for(let i=0;i<window.PRACTICE_TRIALS.length;i++){
       await runTrial(window.PRACTICE_TRIALS[i], i+1);
     }
@@ -230,13 +230,13 @@ async function startTask(){
     fatalErr = err;
     console.error("Task error:", err);
   } finally {
-    // Always show results, even if something failed mid-run
+    // ALWAYS compute + show results (even if something failed)
     const summary = computeSummary(results);
     renderResults(summary);
-    if (fatalErr) {
-      metaLine.textContent = `Session ${sessionId} — Note: an error occurred (${fatalErr.message}). Partial results shown.`;
-    } else {
-      metaLine.textContent = `Session ${sessionId}`;
+    if (metaLine) {
+      metaLine.textContent = fatalErr
+        ? `Session ${sessionId} — Note: an error occurred (${fatalErr.message}). Partial results shown.`
+        : `Session ${sessionId}`;
     }
     showScreen("results");
   }
@@ -297,54 +297,65 @@ function buildApaParagraph(s){
 }
 
 function renderResults(summary){
-  metaLine.textContent = `Session ${sessionId}`;
-  m_n.textContent = summary.n;
-  m_benign.textContent = summary.nb;
-  m_threat.textContent = summary.nt;
-  m_prop_benign.textContent = round2(summary.pb);
-  m_prop_threat.textContent = round2(summary.pt);
-  m_rt_b_m.textContent = Math.round(summary.rt_b_m);
-  m_rt_b_sd.textContent = Math.round(summary.rt_b_sd);
-  m_rt_t_m.textContent = Math.round(summary.rt_t_m);
-  m_rt_t_sd.textContent = Math.round(summary.rt_t_sd);
-  m_conf_b_m.textContent = round2(summary.conf_b_m);
-  m_conf_t_m.textContent = round2(summary.conf_t_m);
-  m_pattern.textContent = summary.pattern;
-  apaText.innerHTML = buildApaParagraph(summary);
+  if (metaLine) metaLine.textContent = `Session ${sessionId}`;
+  if (m_n) m_n.textContent = summary.n;
+  if (m_benign) m_benign.textContent = summary.nb;
+  if (m_threat) m_threat.textContent = summary.nt;
+  if (m_prop_benign) m_prop_benign.textContent = round2(summary.pb);
+  if (m_prop_threat) m_prop_threat.textContent = round2(summary.pt);
+  if (m_rt_b_m) m_rt_b_m.textContent = Math.round(summary.rt_b_m);
+  if (m_rt_b_sd) m_rt_b_sd.textContent = Math.round(summary.rt_b_sd);
+  if (m_rt_t_m) m_rt_t_m.textContent = Math.round(summary.rt_t_m);
+  if (m_rt_t_sd) m_rt_t_sd.textContent = Math.round(summary.rt_t_sd);
+  if (m_conf_b_m) m_conf_b_m.textContent = round2(summary.conf_b_m);
+  if (m_conf_t_m) m_conf_t_m.textContent = round2(summary.conf_t_m);
+  if (m_pattern) m_pattern.textContent = summary.pattern;
+  if (apaText) apaText.innerHTML = buildApaParagraph(summary);
 }
 
-// ---------- APA render + show ----------
+// ---------- APA render + show (kept for reference) ----------
 function generateAndShowResults(){
   const summary = computeSummary(results);
   renderResults(summary);
   showScreen("results");
 }
 
-// ---------- downloads & actions ----------
-dlCsv.addEventListener("click", () => {
-  const csv = resultsToCSV(results);
-  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = `ib_task_${sessionId}.csv`; a.click();
-  URL.revokeObjectURL(url);
-});
-dlJson.addEventListener("click", () => {
-  const payload = { session_id: sessionId, device: deviceInfo, summary: computeSummary(results), trials: results };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = `ib_task_${sessionId}.json`; a.click();
-  URL.revokeObjectURL(url);
-});
-copyApa.addEventListener("click", async () => {
-  const tmp = document.createElement("div");
-  tmp.innerHTML = apaText.innerHTML.replace(/<[^>]+>/g, "");
-  const text = tmp.textContent || tmp.innerText || "";
-  await navigator.clipboard.writeText(text);
-  alert("APA paragraph copied to clipboard.");
-});
-again.addEventListener("click", () => location.reload());
+// ---------- downloads & actions (guarded) ----------
+if (dlCsv) {
+  dlCsv.addEventListener("click", () => {
+    const csv = resultsToCSV(results);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `ib_task_${sessionId}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+
+if (dlJson) {
+  dlJson.addEventListener("click", () => {
+    const payload = { session_id: sessionId, device: deviceInfo, summary: computeSummary(results), trials: results };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `ib_task_${sessionId}.json`; a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+
+if (copyApa) {
+  copyApa.addEventListener("click", async () => {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = apaText.innerHTML.replace(/<[^>]+>/g, "");
+    const text = tmp.textContent || tmp.innerText || "";
+    await navigator.clipboard.writeText(text);
+    alert("APA paragraph copied to clipboard.");
+  });
+}
+
+if (again) {
+  again.addEventListener("click", () => location.reload());
+}
 
 // ---------- begin button ----------
 const btnBegin = $("#btn-begin");

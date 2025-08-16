@@ -227,10 +227,4 @@ button.secondary{ background:var(--surface-2); color:var(--ink); border:1px soli
    Media Queries
    ========================= */
 @media (max-width: 360px){
-  .scenario{ min-height: clamp(260px, 58svh, 520px); }
-  .scenario .line{ font-size: clamp(16px, 5.2vw, 18px); }
-}
-
-@media (min-width: 1024px){
-  .scenario{ min-height: clamp(320px, 42vh, 520px); }
-}
+  .scenario{ min-height: clamp(260px, 58sv
