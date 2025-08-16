@@ -71,7 +71,7 @@ const dlJson = $("#dlJson");
 const copyApa = $("#copyApa");
 const again = $("#again");
 
-// chart canvases (optional; fine if null)
+// chart canvases
 const ctxChoices = document.getElementById("chartChoices");
 const ctxRT = document.getElementById("chartRT");
 const ctxConf = document.getElementById("chartConf");
@@ -89,7 +89,7 @@ const trials = (window.SCENARIOS || []).map((s) => ({
 }));
 
 // ---------- state ----------
-let participantId = "anon"; // no PID input UI in current HTML
+let participantId = "anon";
 let sessionId = makeSessionId();
 let fullscreenOK = 0;
 let deviceInfo = { userAgent: navigator.userAgent, width: window.innerWidth, height: window.innerHeight };
@@ -230,7 +230,6 @@ async function startTask(){
     fatalErr = err;
     console.error("Task error:", err);
   } finally {
-    // ALWAYS compute + show results (even if something failed)
     const summary = computeSummary(results);
     renderResults(summary);
     if (metaLine) {
@@ -238,6 +237,8 @@ async function startTask(){
         ? `Session ${sessionId} — Note: an error occurred (${fatalErr.message}). Partial results shown.`
         : `Session ${sessionId}`;
     }
+    // build charts (guard if Chart.js missing)
+    try { buildCharts(summary, results); } catch (e) { console.warn("Chart build skipped:", e.message); }
     showScreen("results");
   }
 }
@@ -263,12 +264,24 @@ const mean = (xs) => xs.length ? xs.reduce((a,b)=>a+b,0)/xs.length : 0;
 const sd = (xs) => { if (xs.length < 2) return 0; const m = mean(xs); const v = xs.reduce((s,x)=>s+(x-m)*(x-m),0)/(xs.length-1); return Math.sqrt(v); };
 const round2 = (x) => (Math.round(x*100)/100).toFixed(2);
 
+// Wilson 95% CI for proportion
+function ciWilson(k, n, z=1.96){
+  if (n === 0) return [0, 0];
+  const p = k/n;
+  const z2 = z*z;
+  const denom = 1 + z2/n;
+  const center = (p + z2/(2*n)) / denom;
+  const half = (z * Math.sqrt((p*(1-p) + z2/(4*n))/n)) / denom;
+  return [Math.max(0, center - half), Math.min(1, center + half)];
+}
+
 function computeSummary(rows){
   const n = rows.length;
   const benign = rows.filter(r=> r.chosen_valence==="benign");
   const threat = rows.filter(r=> r.chosen_valence==="threat");
   const nb = benign.length, nt = threat.length;
   const pb = n ? nb/n : 0, pt = n ? nt/n : 0;
+
   const rt_b = benign.map(r=>r.rt_choice_ms);
   const rt_t = threat.map(r=>r.rt_choice_ms);
   const conf_b = benign.map(r=>r.confidence);
@@ -278,8 +291,12 @@ function computeSummary(rows){
                  : pb < 0.45 ? "negative (threat-leaning)"
                  : "mixed / neutral";
 
+  // CIs
+  const [pb_lo, pb_hi] = ciWilson(nb, n);
+  const [pt_lo, pt_hi] = ciWilson(nt, n);
+
   return {
-    n, nb, nt, pb, pt,
+    n, nb, nt, pb, pt, pb_lo, pb_hi, pt_lo, pt_hi,
     rt_b_m: mean(rt_b), rt_b_sd: sd(rt_b),
     rt_t_m: mean(rt_t), rt_t_sd: sd(rt_t),
     conf_b_m: mean(conf_b), conf_t_m: mean(conf_t),
@@ -289,11 +306,11 @@ function computeSummary(rows){
 
 function buildApaParagraph(s){
   return `In an online interpretation task with ${s.n} ambiguous partner-related health scenarios, 
-  the participant selected benign completions on ${s.nb} trials (p = ${round2(s.pb)}), 
-  and threat completions on ${s.nt} trials (p = ${round2(s.pt)}). 
-  Reaction times are reported separately for benign and threat trials. 
-  Mean confidence (1–5) was ${round2(s.conf_b_m)} for benign choices and ${round2(s.conf_t_m)} for threat choices. 
-  Overall, the pattern suggests a ${s.pattern} interpretation tendency.`;
+the participant selected benign completions on ${s.nb} trials (p = ${round2(s.pb)}), 
+and threat completions on ${s.nt} trials (p = ${round2(s.pt)}). 
+Reaction times are reported separately for benign and threat trials. 
+Mean confidence (1–5) was ${round2(s.conf_b_m)} for benign choices and ${round2(s.conf_t_m)} for threat choices. 
+Overall, the pattern suggests a ${s.pattern} interpretation tendency.`;
 }
 
 function renderResults(summary){
@@ -313,10 +330,160 @@ function renderResults(summary){
   if (apaText) apaText.innerHTML = buildApaParagraph(summary);
 }
 
+// ---------- Charts ----------
+function buildCharts(s, rows){
+  if (typeof Chart === "undefined") return;
+
+  const benignColor = cssVar("--primary", "#5dd2ff");
+  const threatColor = cssVar("--threat", "#ff6b6b");
+  const gridColor = "rgba(200,210,220,.16)";
+  const labelColor = cssVar("--ink", "#e9eef2");
+  const bgCard = "transparent";
+
+  // Error bar plugin (upper/lower around the bar's value)
+  const errorBarPlugin = {
+    id: 'errorBarPlugin',
+    afterDatasetsDraw(chart, args, pluginOptions){
+      const { ctx, scales } = chart;
+      chart.data.datasets.forEach((ds, di) => {
+        if (!ds.errorBars) return;
+        const meta = chart.getDatasetMeta(di);
+        meta.data.forEach((el, i) => {
+          const value = ds.data[i];
+          const [lower, upper] = ds.errorBars[i]; // diffs from mean
+          const x = el.x;
+          const yHi = scales.y.getPixelForValue(value + upper);
+          const yLo = scales.y.getPixelForValue(value - lower);
+          ctx.save();
+          ctx.strokeStyle = labelColor; ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.moveTo(x, yHi); ctx.lineTo(x, yLo); ctx.stroke();
+          // caps
+          ctx.beginPath();
+          ctx.moveTo(x-6, yHi); ctx.lineTo(x+6, yHi);
+          ctx.moveTo(x-6, yLo); ctx.lineTo(x+6, yLo);
+          ctx.stroke();
+          ctx.restore();
+        });
+      });
+    }
+  };
+  Chart.register(errorBarPlugin);
+
+  // 1) Proportions with 95% CI (Wilson)
+  if (ctxChoices){
+    const means = [s.pb, s.pt];
+    const ciLower = [s.pb - s.pb_lo, s.pt - s.pt_lo];   // distance from mean
+    const ciUpper = [s.pb_hi - s.pb, s.pt_hi - s.pt];   // distance from mean
+
+    new Chart(ctxChoices, {
+      type: 'bar',
+      data: {
+        labels: ["Benign", "Threat"],
+        datasets: [{
+          label: "Proportion",
+          data: means,
+          backgroundColor: [benignColor, threatColor],
+          errorBars: means.map((m, i) => [ciLower[i], ciUpper[i]])
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: labelColor } , grid: { color: gridColor } },
+          y: { min: 0, max: 1, ticks: { color: labelColor }, grid: { color: gridColor } }
+        }
+      }
+    });
+  }
+
+  // 2) Reaction time means ± SD
+  if (ctxRT){
+    const means = [s.rt_b_m || 0, s.rt_t_m || 0];
+    const sds = [s.rt_b_sd || 0, s.rt_t_sd || 0];
+
+    new Chart(ctxRT, {
+      type: 'bar',
+      data: {
+        labels: ["Benign", "Threat"],
+        datasets: [{
+          label: "RT (ms)",
+          data: means,
+          backgroundColor: [benignColor, threatColor],
+          errorBars: sds.map(sd => [sd, sd])
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: labelColor }, grid: { color: gridColor } },
+          y: { ticks: { color: labelColor }, grid: { color: gridColor } }
+        }
+      }
+    });
+  }
+
+  // 3) Confidence means
+  if (ctxConf){
+    const means = [s.conf_b_m || 0, s.conf_t_m || 0];
+    new Chart(ctxConf, {
+      type: 'bar',
+      data: {
+        labels: ["Benign", "Threat"],
+        datasets: [{
+          label: "Confidence (1–5)",
+          data: means,
+          backgroundColor: [benignColor, threatColor]
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { ticks: { color: labelColor }, grid: { color: gridColor } },
+          y: { min: 1, max: 5, ticks: { color: labelColor }, grid: { color: gridColor } }
+        }
+      }
+    });
+  }
+
+  // 4) Sequence strip (1 = benign, -1 = threat)
+  if (ctxSeq){
+    const seq = rows.map(r => r.chosen_valence === "benign" ? 1 : -1);
+    const colors = rows.map(r => r.chosen_valence === "benign" ? benignColor : threatColor);
+
+    new Chart(ctxSeq, {
+      type: 'bar',
+      data: {
+        labels: rows.map((_, i) => i+1),
+        datasets: [{
+          data: seq,
+          backgroundColor: colors,
+          borderWidth: 0,
+          barPercentage: 1.0,
+          categoryPercentage: 1.0
+        }]
+      },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          x: { display: false },
+          y: { min: -1, max: 1, display: false }
+        }
+      }
+    });
+  }
+}
+
 // ---------- APA render + show (kept for reference) ----------
 function generateAndShowResults(){
   const summary = computeSummary(results);
   renderResults(summary);
+  try { buildCharts(summary, results); } catch(e){}
   showScreen("results");
 }
 
@@ -331,7 +498,6 @@ if (dlCsv) {
     URL.revokeObjectURL(url);
   });
 }
-
 if (dlJson) {
   dlJson.addEventListener("click", () => {
     const payload = { session_id: sessionId, device: deviceInfo, summary: computeSummary(results), trials: results };
@@ -342,7 +508,6 @@ if (dlJson) {
     URL.revokeObjectURL(url);
   });
 }
-
 if (copyApa) {
   copyApa.addEventListener("click", async () => {
     const tmp = document.createElement("div");
@@ -352,7 +517,6 @@ if (copyApa) {
     alert("APA paragraph copied to clipboard.");
   });
 }
-
 if (again) {
   again.addEventListener("click", () => location.reload());
 }

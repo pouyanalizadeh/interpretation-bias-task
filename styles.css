@@ -19,8 +19,9 @@ html { -webkit-text-size-adjust: 100%; }
   --surface-2:#171a22;
   --ink:#e9eef2;
   --muted:#a7b1b8;
-  --primary:#5dd2ff;
+  --primary:#5dd2ff;       /* benign */
   --primary-ink:#051820;
+  --threat:#ff6b6b;        /* threat */
 }
 
 body{
@@ -112,7 +113,7 @@ button.secondary{ background:var(--surface-2); color:var(--ink); border:1px soli
 .editable{ color: #ffef9d; }
 
 /* =========================
-   Task (single column everywhere)
+   Task
    ========================= */
 #screen-task{ align-items: stretch; }
 
@@ -123,11 +124,11 @@ button.secondary{ background:var(--surface-2); color:var(--ink); border:1px soli
   gap: clamp(10px, 2vh, 16px);
 }
 
-/* Fixation (absolute center, cross-browser) */
+/* Fixation */
 #fixation{
   position: fixed;
-  top: 0; right: 0; bottom: 0; left: 0;
-  display: none;                 /* JS toggles to flex when shown */
+  inset: 0;
+  display: none;
   align-items: center;
   justify-content: center;
   font-size: clamp(28px, 7vw, 62px);
@@ -150,7 +151,7 @@ button.secondary{ background:var(--surface-2); color:var(--ink); border:1px soli
 }
 .scenario .strong{ font-weight:700; }
 
-/* Answers under scenario */
+/* Answers */
 .answers{
   display:flex; flex-direction:column; gap:10px;
   align-items:stretch;
@@ -169,18 +170,16 @@ button.secondary{ background:var(--surface-2); color:var(--ink); border:1px soli
    ========================= */
 .confidence{
   position: fixed;
-  top: 0; right: 0; bottom: 0; left: 0;
+  inset: 0;
   display: none;
   background: rgba(0,0,0,.45);
   z-index: 9998;
 }
-
 .confidence.is-open{
   display: flex !important;
   align-items: center;
   justify-content: center;
 }
-
 .conf-wrap{
   width: min(92vw, 520px);
   background: var(--surface);
@@ -189,29 +188,25 @@ button.secondary{ background:var(--surface-2); color:var(--ink); border:1px soli
   box-shadow: var(--shadow);
   padding: clamp(16px, 3.5vw, 28px);
 }
-
 .conf-title{
   text-align:center;
   font-size:clamp(18px, 2.4vw, 22px);
   margin-bottom:.75rem;
 }
-
 .conf-grid{
   display:grid;
   grid-template-columns:repeat(5, 1fr);
   gap:10px;
 }
-
 .conf{
   padding:.8rem 0; font-size:clamp(16px, 2.2vw, 18px);
   background:var(--surface-2); color:var(--ink);
   border:1px solid #222838; border-radius:12px;
 }
-.conf:hover,
-.conf:focus{ outline:2px solid var(--primary); outline-offset:1px; }
+.conf:hover,.conf:focus{ outline:2px solid var(--primary); outline-offset:1px; }
 
 /* =========================
-   Results
+   Results + Charts
    ========================= */
 .done-card{
   background:var(--surface-2);
@@ -223,8 +218,31 @@ button.secondary{ background:var(--surface-2); color:var(--ink); border:1px soli
   overflow-x:auto;
 }
 
-/* =========================
-   Media Queries
-   ========================= */
+.charts{
+  display:grid; gap:12px; margin-top:8px;
+  grid-template-columns: 1fr;
+}
+.chart-card{
+  background:var(--surface-2);
+  border:1px solid #222838;
+  border-radius:14px; padding:12px;
+}
+.chart-title{ font-weight:600; margin: 0 0 8px 0; }
+.caption{ color:var(--muted); font-size:.85rem; margin-top:6px; }
+
+.chart-card canvas{ width:100%; height: 240px; }
+.chart-wide canvas{ height: 100px; }
+
+@media (min-width: 880px){
+  .charts{ grid-template-columns: 1fr 1fr; }
+  .chart-wide{ grid-column: 1 / -1; }
+}
+
+/* Small devices tweaks */
 @media (max-width: 360px){
-  .scenario{ min-height: clamp(260px, 58sv
+  .scenario{ min-height: clamp(260px, 58svh, 520px); }
+  .scenario .line{ font-size: clamp(16px, 5.2vw, 18px); }
+}
+@media (min-width: 1024px){
+  .scenario{ min-height: clamp(320px, 42vh, 520px); }
+}

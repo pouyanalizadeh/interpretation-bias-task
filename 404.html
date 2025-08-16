@@ -7,8 +7,7 @@
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
     <title>Partner-Caregiver Interpretation Task</title>
-    <!-- cache-bust so mobile won’t use stale CSS -->
-    <link rel="stylesheet" href="./styles.css?v=10" />
+    <link rel="stylesheet" href="./styles.css?v=12" />
   </head>
 
   <body>
@@ -34,12 +33,12 @@
             </li>
             <li>
               <strong>Practice (not recorded)</strong><br />
-              Before the main block, you’ll do <span class="editable" data-key="nPractice">two</span> neutral, not-health-related
-              scenarios to get familiar with the task. Your responses to these practice items <em>are not recorded</em>.
+              You’ll do <span class="editable" data-key="nPractice">two</span> neutral scenarios to get familiar with the task.
+              Your responses to these practice items are <em>not recorded</em>.
             </li>
             <li>
               <strong>Privacy</strong><br />
-              Your responses are handled confidentially and analyzed in aggregate. Individual data are not shared outside the research team.
+              Your responses are handled confidentially and analyzed in aggregate.
             </li>
           </ol>
 
@@ -47,8 +46,7 @@
             <summary>Copyright &amp; Use</summary>
             <p class="smallprint">
               This task was <strong>designed, developed, and tested by Pouyan Alizadeh and Ali Khatibi</strong>.
-              All rights reserved. Any use, reproduction, or distribution requires prior <strong>written consent</strong>
-              from the authors.
+              All rights reserved. Use or distribution requires prior <strong>written consent</strong>.
             </p>
           </details>
         </div>
@@ -119,7 +117,34 @@
         <h3>APA-style note</h3>
         <pre id="apaText" class="apa"></pre>
 
-        <div class="row">
+        <h3 style="margin-top:1rem;">Visual summary</h3>
+        <div class="charts">
+          <div class="chart-card">
+            <div class="chart-title">Interpretation proportions (95% CI)</div>
+            <canvas id="chartChoices"></canvas>
+            <div class="caption">Proportion of benign vs. threat completions with 95% confidence intervals (Wilson).</div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-title">Reaction time (ms)</div>
+            <canvas id="chartRT"></canvas>
+            <div class="caption">Mean decision RT with ±1 SD error bars for benign and threat choices.</div>
+          </div>
+
+          <div class="chart-card">
+            <div class="chart-title">Confidence (1–5)</div>
+            <canvas id="chartConf"></canvas>
+            <div class="caption">Mean confidence for benign vs. threat choices.</div>
+          </div>
+
+          <div class="chart-card chart-wide">
+            <div class="chart-title">Trial sequence</div>
+            <canvas id="chartSeq"></canvas>
+            <div class="caption">Each block represents a trial (blue=benign, red=threat).</div>
+          </div>
+        </div>
+
+        <div class="row" style="margin-top:12px;">
           <button id="dlCsv" class="secondary">Download CSV</button>
           <button id="dlJson" class="secondary">Download JSON</button>
           <button id="copyApa" class="secondary">Copy APA text</button>
@@ -128,8 +153,9 @@
       </div>
     </section>
 
-    <!-- Load data then app -->
+    <!-- Data, charts, then app -->
     <script src="./scenarios.js?v=4"></script>
-    <script src="./app.js?v=6"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="./app.js?v=12"></script>
   </body>
 </html>
