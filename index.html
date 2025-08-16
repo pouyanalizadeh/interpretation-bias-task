@@ -20,33 +20,36 @@
     </section>
 
     <!-- Task screen -->
-    <section id="screen-task" class="screen hidden">
-      <div id="fixation" class="fixation">+</div>
-      <div id="scenario" class="scenario">
-        <div id="line1" class="line"></div>
-        <div id="line2" class="line"></div>
-        <div id="line3" class="line"></div>
-        <div id="line4" class="line strong"></div>
-      </div>
+   <section id="screen-task" class="screen hidden">
+  <div id="fixation" class="fixation">+</div>
 
-      <div id="answers" class="answers" style="display:none">
-        <button id="opt1" class="answer-btn" data-index="0"></button>
-        <button id="opt2" class="answer-btn" data-index="1"></button>
-      </div>
+  <div class="task-wrap">
+    <div id="scenario" class="scenario">
+      <div id="line1" class="line"></div>
+      <div id="line2" class="line"></div>
+      <div id="line3" class="line"></div>
+      <div id="line4" class="line strong"></div>
+    </div>
 
-      <div id="confidence" class="confidence hidden">
-        <div class="conf-wrap">
-          <div class="conf-title">How confident are you?</div>
-          <div class="conf-grid">
-            <button class="conf" data-val="1">1</button>
-            <button class="conf" data-val="2">2</button>
-            <button class="conf" data-val="3">3</button>
-            <button class="conf" data-val="4">4</button>
-            <button class="conf" data-val="5">5</button>
-          </div>
-        </div>
+    <div id="answers" class="answers" style="display:none">
+      <button id="opt1" class="answer-btn" data-index="0"></button>
+      <button id="opt2" class="answer-btn" data-index="1"></button>
+    </div>
+  </div>
+
+  <div id="confidence" class="confidence hidden">
+    <div class="conf-wrap">
+      <div class="conf-title">How confident are you?</div>
+      <div class="conf-grid">
+        <button class="conf" data-val="1">1</button>
+        <button class="conf" data-val="2">2</button>
+        <button class="conf" data-val="3">3</button>
+        <button class="conf" data-val="4">4</button>
+        <button class="conf" data-val="5">5</button>
       </div>
-    </section>
+    </div>
+  </div>
+</section>
 
     <!-- Results screen -->
     <section id="screen-results" class="screen hidden">
