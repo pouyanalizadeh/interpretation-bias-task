@@ -1,246 +1,261 @@
+/* ====== Base / Reset ====== */
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+}
+
 :root{
-  --bg:#f7f7fb;
-  --card:#ffffff;
-  --ink:#0f172a;
-  --muted:#64748b;
-  --accent:#111827;
-  --good:#059669; /* benign */
-  --bad:#e11d48;  /* threat */
-
-  /* layout tuning */
-  --scenario-top: 34vh;       /* slightly higher on the screen */
-  --answers-bottom: 16vh;
-  --confidence-bottom: 18vh;
+  --max-content-width: 900px;
+  --page-pad: clamp(12px, 3vw, 28px);
+  --card-radius: 18px;
+  --shadow: 0 10px 30px rgba(0,0,0,.08);
+  --bg: #0b0c10;          /* deep charcoal */
+  --ink: #e9eef2;         /* off-white text */
+  --muted: #a7b1b8;       /* muted text */
+  --primary: #5dd2ff;     /* accent */
+  --primary-ink: #051820;
+  --surface: #12141a;     /* cards/panels */
+  --surface-2: #171a22;   /* subtle contrast */
 }
 
-* { box-sizing: border-box; }
-html, body { height:100%; }
-body {
-  margin:0;
-  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Apple Color Emoji","Segoe UI Emoji";
-  color:var(--ink);
-  background:var(--bg);
+body{
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+  line-height: 1.45;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
-/* generic screen handling */
-.screen { display:none; min-height:100vh; position:relative; }
-.screen.show { display:block; }
-.hidden { display:none !important; }
+/* ====== Screens layout ====== */
+.screen{
+  min-height: 100svh; /* supports mobile browser chrome */
+  padding: var(--page-pad);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.hidden{ display: none !important; }
+.show{ display: flex !important; }
 
-/* cards & layout */
+/* ====== Cards / Common UI ====== */
 .card{
-  max-width:900px;
-  margin:8vh auto;
-  background:var(--card);
-  border-radius:1rem;
-  padding:2rem;
-  box-shadow: 0 10px 30px rgba(0,0,0,.08);
+  width: min(100%, var(--max-content-width));
+  background: var(--surface);
+  border-radius: var(--card-radius);
+  box-shadow: var(--shadow);
+  padding: clamp(16px, 3.5vw, 36px);
 }
-.done-card{
-  max-width:780px;
-  margin:0 auto;
-  background:var(--card);
-  border-radius:1rem;
-  padding:1.2rem 1.4rem;
-  box-shadow:0 10px 30px rgba(0,0,0,.08);
+
+h1,h2,h3{
+  margin: 0 0 .6em 0;
+  line-height: 1.2;
 }
-.row{ display:flex; gap:.75rem; flex-wrap:wrap; }
+h1{ font-size: clamp(22px, 3.5vw, 34px); }
+h2{ font-size: clamp(18px, 3vw, 28px); }
+h3{ font-size: clamp(16px, 2.5vw, 22px); }
 
-h1{ margin:.25rem 0 1rem; font-size:1.8rem; }
-h2{ margin:.2rem 0 .6rem; font-size:1.4rem; }
-.muted{ color:var(--muted); }
+p{ margin: .5em 0; }
+.muted{ color: var(--muted); }
 
-.label{ display:block; margin-top:.6rem; margin-bottom:.25rem; font-weight:600; }
+label.label{
+  display: block;
+  font-size: 0.95rem;
+  color: var(--muted);
+  margin-top: .75rem;
+}
 input#pid{
-  width:100%;
-  padding:.7rem .9rem;
-  font-size:1rem;
-  border:1px solid #e5e7eb;
-  border-radius:.6rem;
-  outline:none;
+  width: 260px;
+  max-width: 100%;
+  padding: .6rem .8rem;
+  border-radius: 10px;
+  border: 1px solid #212633;
+  background: #0e1118;
+  color: var(--ink);
+  outline: none;
+  transition: border-color .15s ease;
 }
-input#pid:focus{ border-color:#111827; }
+input#pid:focus{ border-color: #2c8ab3; }
 
-.primary, .secondary, .ghost{
-  margin-top:.8rem;
-  padding:.7rem 1rem;
-  border-radius:.7rem;
-  cursor:pointer;
-  border:1px solid transparent;
+button{
+  appearance: none;
+  border: 0;
+  border-radius: 12px;
+  padding: .8rem 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
 }
-.primary{ background:var(--accent); color:white; }
-.primary:hover{ opacity:.92; }
-.secondary{ background:white; border-color:#e5e7eb; }
-.secondary:hover{ background:#f9fafb; }
-.ghost{ background:transparent; border-color:#e5e7eb; color:var(--muted); }
-.ghost:hover{ background:#f9fafb; }
-
-.hint{ margin:1rem 0 0; color:var(--muted); line-height:1.5; }
-
-/* =========================
-   TASK
-   ========================= */
-#screen-task{ min-height:100vh; position:relative; }
-
-/* FIXATION — hidden by default, shown only while .show is applied */
-.fixation{
-  position:fixed;
-  inset:0;
-  display:none;                 /* hidden by default */
-  align-items:center;
-  justify-content:center;
-  font-size:42px;
-  font-weight:600;
-  color:#111827;
-  background:var(--bg);         /* keeps blank-page look */
-  transition:none;              /* no fades for timing cleanliness */
+button.primary{
+  background: var(--primary);
+  color: var(--primary-ink);
 }
-.fixation.show{
-  display:flex;                 /* visible only during fixation window */
+button.secondary{
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid #222838;
+}
+.row{
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 12px;
 }
 
-/* scenario — centered horizontally; slightly above vertical center */
+/* ====== Task Screen Layout ====== */
+/* We use a column layout that reserves vertical space for scenario & answers
+   so they never overlap (answers can also stick to the bottom on phones). */
+#screen-task{
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+#screen-task > div,
+#screen-task .scenario,
+#screen-task .answers{
+  width: min(100%, var(--max-content-width));
+  margin-inline: auto;
+}
+
+/* Fixation sits centered over everything when shown */
+#fixation{
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: clamp(28px, 7vw, 62px);
+  font-weight: 700;
+  color: var(--muted);
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Scenario block */
 .scenario{
-  position:absolute;
-  top:var(--scenario-top);
-  left:0; right:0;
-  margin:0 auto;
-  width:min(900px, 92vw);
-  text-align:center;
+  /* reserve generous vertical space so lines don't jump */
+  min-height: clamp(220px, 48svh, 420px);
+  display: flex;
+  align-items: center;     /* vertically center lines within the block */
+  justify-content: center;
+  text-align: center;
+  padding: clamp(10px, 2vw, 16px);
 }
-.line{
-  font-size:1.5rem;
-  line-height:1.6;
-  margin:.25rem 0;
-  opacity:1;                    /* no fade */
-  transition:none;
-}
-.line.strong{ font-weight:600; }
 
-/* answers */
-.answers{
-  position:fixed;
-  left:0; right:0;
-  bottom:var(--answers-bottom);
-  display:grid;
-  grid-template-columns:1fr;
-  gap:.75rem;
-  width:min(900px,92vw);
-  margin:0 auto;
+.scenario .line{
+  font-size: clamp(18px, 2.4vw, 24px);
+  line-height: 1.35;
+  margin: .25rem 0;
+  transition: opacity .2s ease;
 }
-@media (min-width: 700px){
-  .answers{ grid-template-columns:1fr 1fr; }
+.scenario .strong{
+  font-weight: 700;
+}
+
+/* Answers never overlap scenario; they live in their own area.
+   On mobile they become sticky to the bottom for thumb reach. */
+.answers{
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+  margin-top: clamp(8px, 2vh, 16px);
+  padding-bottom: max(env(safe-area-inset-bottom), 8px);
+  position: sticky;
+  bottom: 0;
+  background: linear-gradient(180deg, rgba(11,12,16,0) 0%, rgba(11,12,16,.8) 40%, rgba(11,12,16,1) 100%);
+  padding-top: 12px;
+  z-index: 1;
 }
 .answer-btn{
-  text-align:left;
-  padding:1rem 1rem;
-  border-radius:.9rem;
-  background:white;
-  border:1px solid #e5e7eb;
-  box-shadow: 0 6px 18px rgba(0,0,0,.04);
-  font-size:1.1rem;
-  cursor:pointer;
+  flex: 1 1 260px;
+  max-width: 520px;
+  padding: 1rem 1.2rem;
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid #222838;
+  border-radius: 14px;
+  font-size: clamp(16px, 2.2vw, 18px);
+  box-shadow: var(--shadow);
 }
-.answer-btn:hover{ background:#fafafa; }
-.answer-btn[disabled]{ opacity:.45; cursor:default; }
 
-/* confidence overlay */
+/* ====== Confidence Modal (centered, not “too down”) ====== */
 .confidence{
-  position:fixed;
-  left:0; right:0; bottom:0;
-  display:flex;
-  justify-content:center;
-  pointer-events:none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,.45);
+  display: grid;
+  place-items: center; /* centers vertically & horizontally */
+  z-index: 5;
 }
-.confidence.show{ pointer-events:auto; }
-.conf-card{
-  width:min(900px,92vw);
-  margin-bottom:var(--confidence-bottom);
-  background:var(--card);
-  border-radius:1rem;
-  padding:1rem;
-  box-shadow:0 12px 34px rgba(0,0,0,.12);
+
+.conf-wrap{
+  width: min(92vw, 520px);
+  background: var(--surface);
+  border: 1px solid #222838;
+  border-radius: 18px;
+  box-shadow: var(--shadow);
+  padding: clamp(16px, 3.5vw, 28px);
 }
-.conf-title{ font-weight:700; margin-bottom:.25rem; }
-.conf-sub{ color:var(--muted); margin-bottom:.75rem; }
-.conf-row{ display:flex; gap:.5rem; }
+
+.conf-title{
+  font-size: clamp(18px, 2.4vw, 22px);
+  margin-bottom: .75rem;
+  text-align: center;
+}
+
+.conf-grid{
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 10px;
+}
 .conf{
-  flex:1;
-  padding:.6rem;
-  border-radius:.7rem;
-  border:1px solid #e5e7eb;
-  background:white;
-  cursor:pointer;
-  font-size:1.05rem;
+  padding: .8rem 0;
+  font-size: clamp(16px, 2.2vw, 18px);
+  background: var(--surface-2);
+  color: var(--ink);
+  border: 1px solid #222838;
+  border-radius: 12px;
 }
-.conf:hover{ background:#f9fafb; }
-
-/* finished (legacy row) */
-.done{
-  position:fixed;
-  left:0; right:0;
-  bottom:2rem;
-  display:flex;
-  justify-content:center;
+.conf:focus,
+.conf:hover{
+  outline: 2px solid var(--primary);
+  outline-offset: 1px;
 }
 
-/* =========================
-   RESULTS
-   ========================= */
-.apa-report h1{ margin-bottom:.4rem; }
-#metaLine{ margin-top:-.4rem; margin-bottom:1.2rem; }
-
-.stats-grid{
-  display:grid;
-  grid-template-columns:1fr;
-  gap:.75rem;
-  margin:.6rem 0 1.2rem;
+/* ====== Results styling (unchanged structurally, improved spacing) ====== */
+.done-card{
+  background: var(--surface-2);
+  padding: 14px;
+  border-radius: 14px;
+  border: 1px solid #222838;
 }
-@media (min-width: 700px){
-  .stats-grid{ grid-template-columns:1fr 1fr; }
-}
-.metric{
-  padding:.9rem;
-  border:1px solid #e5e7eb;
-  border-radius:.8rem;
-  background:#fff;
-}
-.metric .label{ margin:0 0 .25rem; font-weight:600; color:var(--muted); }
-.metric .value{ font-size:1.05rem; }
-.tag{ display:inline-block; padding:.2rem .5rem; border-radius:.6rem; background:#f3f4f6; }
-.apa-text{ line-height:1.6; }
-
-/* CHARTS */
-.charts-grid{
-  display:grid;
-  grid-template-columns:1fr;
-  gap:1rem;
-  margin:.75rem 0 1.25rem;
-}
-@media (min-width: 900px){
-  .charts-grid{ grid-template-columns:1fr 1fr; }
-}
-.chart{
-  background:#fff;
-  border:1px solid #e5e7eb;
-  border-radius:.8rem;
-  padding:.6rem .8rem;
-  height:300px;
-  display:flex;
-  align-items:stretch;
-}
-.chart canvas{
-  width:100% !important;
-  height:100% !important;
+.apa{
+  background: #0f141b;
+  color: #d9e3ea;
+  padding: 12px;
+  border-radius: 12px;
+  border: 1px solid #1e2433;
+  overflow-x: auto;
 }
 
-/* =========================
-   PRINT CLEANUP
-   ========================= */
-@media print {
-  body{ background:white; }
-  .screen{ display:none !important; }
-  #screen-results{ display:block !important; }
-  .actions{ display:none !important; }
-  .card{ box-shadow:none; border:0; }
+/* ====== Responsive Tweaks ====== */
+@media (max-width: 720px){
+  .answers{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .answer-btn{
+    width: 100%;
+  }
+  /* bump scenario min-height a bit to avoid crowding when UI chrome is visible */
+  .scenario{ min-height: clamp(260px, 54svh, 520px); }
 }
+
+/* Ultra-small phones */
+@media (max-width: 360px){
+  .scenario .line{ font-size: clamp(16px, 5.2vw, 18px); }
+}
+
