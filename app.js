@@ -71,7 +71,7 @@ const dlJson = $("#dlJson");
 const copyApa = $("#copyApa");
 const again = $("#again");
 
-// chart canvases
+// chart canvases (optional; fine if null)
 const ctxChoices = document.getElementById("chartChoices");
 const ctxRT = document.getElementById("chartRT");
 const ctxConf = document.getElementById("chartConf");
@@ -89,7 +89,7 @@ const trials = (window.SCENARIOS || []).map((s) => ({
 }));
 
 // ---------- state ----------
-let participantId = "anon";
+let participantId = "anon"; // <- FIX: no pidInput
 let sessionId = makeSessionId();
 let fullscreenOK = 0;
 let deviceInfo = { userAgent: navigator.userAgent, width: window.innerWidth, height: window.innerHeight };
@@ -116,7 +116,10 @@ async function showScenarioLines(textLines){
   lines[2].textContent = textLines[2]; await sleep(800);
   lines[3].textContent = textLines[3];
 }
-function showAnswers(opts){ btns.forEach((b,i)=>{ b.disabled=false; b.textContent=opts[i].label; b.dataset.index=i; }); answersBox.style.display="grid"; }
+function showAnswers(opts){
+  btns.forEach((b,i)=>{ b.disabled=false; b.textContent=opts[i].label; b.dataset.index=i; });
+  answersBox.style.display="grid";
+}
 function hideAnswers(){ answersBox.style.display="none"; }
 function showConfidence(){ confBox.classList.add("is-open"); }
 function hideConfidence(){ confBox.classList.remove("is-open"); }
@@ -208,10 +211,12 @@ async function startTask(){
   showScreen("task");
   results = [];
 
+  // Practice first
   for(let i=0;i<window.PRACTICE_TRIALS.length;i++){
     await runTrial(window.PRACTICE_TRIALS[i], i+1);
   }
 
+  // Main block
   const order = shuffle(trials);
   for(let j=0;j<order.length;j++){
     const rec = await runTrial(order[j], j+1);
@@ -238,6 +243,10 @@ function escapeCSV(val){
 }
 
 // ---------- summary / APA ----------
+const mean = (xs) => xs.length ? xs.reduce((a,b)=>a+b,0)/xs.length : 0;
+const sd = (xs) => { if (xs.length < 2) return 0; const m = mean(xs); const v = xs.reduce((s,x)=>s+(x-m)*(x-m),0)/(xs.length-1); return Math.sqrt(v); };
+const round2 = (x) => (Math.round(x*100)/100).toFixed(2);
+
 function computeSummary(rows){
   const n = rows.length;
   const benign = rows.filter(r=> r.chosen_valence==="benign");
@@ -258,8 +267,7 @@ function computeSummary(rows){
     rt_b_m: mean(rt_b), rt_b_sd: sd(rt_b),
     rt_t_m: mean(rt_t), rt_t_sd: sd(rt_t),
     conf_b_m: mean(conf_b), conf_t_m: mean(conf_t),
-    pattern,
-    arrays: { rt_b, rt_t, conf_b, conf_t }
+    pattern
   };
 }
 
