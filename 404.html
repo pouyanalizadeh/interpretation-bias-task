@@ -2,12 +2,94 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Vite + React + TS</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Partner-Caregiver Interpretation Task</title>
+    <!-- cache-bust with ?v=4 so mobile won’t use stale CSS -->
+    <link rel="stylesheet" href="./styles.css?v=4" />
   </head>
   <body>
-    <div id="root"></div>
-    <script type="module" src="/src/main.tsx"></script>
+    <!-- Instructions -->
+    <section id="screen-instructions" class="screen show">
+      <div class="card">
+        <h1>Interpretation Task (Partner-Caregiver Study)</h1>
+        <p class="muted">Enter a participant ID (or leave blank) and press Start.</p>
+        <label for="pid" class="label">Participant ID</label>
+        <input id="pid" placeholder="e.g., P001" />
+        <div class="row">
+          <button id="startBtn" class="primary">Start</button>
+        </div>
+        <p class="muted">Tips: Use keys 1/2 to choose and 1–5 for confidence.</p>
+      </div>
+    </section>
+
+    <!-- Task -->
+    <section id="screen-task" class="screen hidden">
+      <div id="fixation" class="fixation">+</div>
+
+      <!-- SINGLE-COLUMN LAYOUT: scenario then answers -->
+      <div class="task-wrap">
+        <div id="scenario" class="scenario">
+          <div id="line1" class="line"></div>
+          <div id="line2" class="line"></div>
+          <div id="line3" class="line"></div>
+          <div id="line4" class="line strong"></div>
+        </div>
+
+        <div id="answers" class="answers" style="display:none">
+          <button id="opt1" class="answer-btn" data-index="0"></button>
+          <button id="opt2" class="answer-btn" data-index="1"></button>
+        </div>
+      </div>
+
+      <!-- Confidence modal -->
+      <div id="confidence" class="confidence hidden">
+        <div class="conf-wrap">
+          <div class="conf-title">How confident are you?</div>
+          <div class="conf-grid">
+            <button class="conf" data-val="1">1</button>
+            <button class="conf" data-val="2">2</button>
+            <button class="conf" data-val="3">3</button>
+            <button class="conf" data-val="4">4</button>
+            <button class="conf" data-val="5">5</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Results -->
+    <section id="screen-results" class="screen hidden">
+      <div class="card">
+        <h2>Results</h2>
+        <p id="metaLine" class="muted"></p>
+
+        <div class="row">
+          <div class="done-card" style="flex:1">
+            <strong>Summary</strong>
+            <div>N trials: <span id="m_n">0</span></div>
+            <div>Benign choices: <span id="m_benign">0</span> (<span id="m_prop_benign">0%</span>)</div>
+            <div>Threat choices: <span id="m_threat">0</span> (<span id="m_prop_threat">0%</span>)</div>
+            <div>RT (ms) benign: <span id="m_rt_b_m">0</span> ± <span id="m_rt_b_sd">0</span></div>
+            <div>RT (ms) threat: <span id="m_rt_t_m">0</span> ± <span id="m_rt_t_sd">0</span></div>
+            <div>Confidence benign / threat: <span id="m_conf_b_m">0</span> / <span id="m_conf_t_m">0</span></div>
+            <div>Pattern: <span id="m_pattern">—</span></div>
+          </div>
+        </div>
+
+        <h3>APA-style note</h3>
+        <pre id="apaText" class="apa"></pre>
+
+        <div class="row">
+          <button id="dlCsv" class="secondary">Download CSV</button>
+          <button id="dlJson" class="secondary">Download JSON</button>
+          <button id="copyApa" class="secondary">Copy APA text</button>
+          <button id="again" class="primary">Run Again</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Load data then app -->
+    <script src="./scenarios.js"></script>
+    <script src="./app.js"></script>
   </body>
 </html>
+
