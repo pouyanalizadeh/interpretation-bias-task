@@ -1,9 +1,12 @@
-/* ===== Base ===== */
+/* =========================
+   Base
+   ========================= */
 *,
 *::before,
 *::after { box-sizing: border-box; }
 
 html, body { height: 100%; }
+html { -webkit-text-size-adjust: 100%; }
 
 :root{
   --maxw: 760px;
@@ -20,7 +23,6 @@ html, body { height: 100%; }
   --primary-ink:#051820;
 }
 
-html { -webkit-text-size-adjust: 100%; }
 body{
   margin:0; background:var(--bg); color:var(--ink);
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
@@ -29,14 +31,32 @@ body{
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ===== Screens ===== */
-.screen{
-  min-height: 100svh;
-  padding: var(--pad);
-  display:flex; align-items:center; justify-content:center;
+h1,h2,h3{ margin:0 0 .6em 0; line-height:1.2; }
+h1{ font-size: clamp(22px, 3.5vw, 34px); }
+h2{ font-size: clamp(18px, 3vw, 28px); }
+h3{ font-size: clamp(16px, 2.5vw, 22px); }
+p{ margin:.5em 0; }
+
+.muted{ color:var(--muted); }
+
+/* Inputs & Buttons */
+label.label{ display:block; margin-top:.75rem; color:var(--muted); }
+
+input#pid{
+  width:260px; max-width:100%;
+  padding:.6rem .8rem; border-radius:10px;
+  border:1px solid #212633; background:#0e1118; color:var(--ink);
 }
-.hidden{ display:none !important; }
-.screen.show{ display:flex !important; }
+input#pid:focus{ border-color:#2c8ab3; }
+
+button{
+  appearance:none; border:0; border-radius:12px;
+  padding:.85rem 1.1rem; font-weight:600; cursor:pointer;
+}
+button.primary{ background:var(--primary); color:var(--primary-ink); }
+button.secondary{ background:var(--surface-2); color:var(--ink); border:1px solid #222838; }
+
+.row{ display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; }
 
 .card{
   width:min(100%, var(--maxw));
@@ -46,28 +66,56 @@ body{
   padding:clamp(16px, 3.5vw, 32px);
 }
 
-h1,h2,h3{ margin:0 0 .6em 0; line-height:1.2; }
-h1{ font-size: clamp(22px, 3.5vw, 34px); }
-h2{ font-size: clamp(18px, 3vw, 28px); }
-h3{ font-size: clamp(16px, 2.5vw, 22px); }
-p{ margin:.5em 0; }
-.muted{ color:var(--muted); }
-
-label.label{ display:block; margin-top:.75rem; color:var(--muted); }
-input#pid{
-  width:260px; max-width:100%;
-  padding:.6rem .8rem; border-radius:10px;
-  border:1px solid #212633; background:#0e1118; color:var(--ink);
+/* =========================
+   Screens
+   ========================= */
+.screen{
+  min-height: 100svh;
+  padding: var(--pad);
+  display:flex; align-items:center; justify-content:center;
 }
-input#pid:focus{ border-color:#2c8ab3; }
+.hidden{ display:none !important; }
+.screen.show{ display:flex !important; }
 
-button{ appearance:none; border:0; border-radius:12px; padding:.85rem 1.1rem; font-weight:600; cursor:pointer; }
-button.primary{ background:var(--primary); color:var(--primary-ink); }
-button.secondary{ background:var(--surface-2); color:var(--ink); border:1px solid #222838; }
-.row{ display:flex; gap:12px; flex-wrap:wrap; margin-top:12px; }
+/* =========================
+   Instruction Screen
+   ========================= */
+.inst-card{
+  width: min(850px, 92vw);
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 18px;
+  padding: clamp(1rem, 2.8vw, 2rem);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
 
-/* ===== Task (single column everywhere) ===== */
+.inst-header h1{
+  margin: 0 0 .25rem 0;
+  font-size: clamp(1.4rem, 3.6vw, 2rem);
+  line-height: 1.2;
+}
+.subtitle{ margin: 0 0 1rem 0; color: var(--muted); font-size: .95rem; }
+
+.inst-content{ display: grid; gap: 1rem; }
+.inst-list{ margin: 0; padding-left: 1.25rem; display: grid; gap: .75rem; }
+.inst-list li{ line-height: 1.55; }
+.inst-list strong{ color: #ffffff; }
+
+.inst-details summary{ cursor: pointer; color: var(--primary); margin-top: .25rem; }
+.inst-details p{ margin-top: .5rem; }
+
+.inst-footer{ margin-top: 1.25rem; display: grid; gap: .5rem; }
+
+.smallprint{ color: var(--muted); font-size: .85rem; }
+.footnote{ margin: 0; }
+.editable{ color: #ffef9d; }
+
+/* =========================
+   Task (single column everywhere)
+   ========================= */
 #screen-task{ align-items: stretch; }
+
 .task-wrap{
   width:min(100%, var(--maxw));
   margin-inline:auto;
@@ -75,12 +123,12 @@ button.secondary{ background:var(--surface-2); color:var(--ink); border:1px soli
   gap: clamp(10px, 2vh, 16px);
 }
 
-/* Fixation */
+/* Fixation (absolute center, cross-browser) */
 #fixation{
   position: fixed;
-  top: 0; right: 0; bottom: 0; left: 0;  /* more explicit than inset for Chrome */
-  display: none;                         /* hidden by default; JS will set flex */
-  align-items: center;                   /* cross-browser centering */
+  top: 0; right: 0; bottom: 0; left: 0;
+  display: none;                 /* JS toggles to flex when shown */
+  align-items: center;
   justify-content: center;
   font-size: clamp(28px, 7vw, 62px);
   line-height: 1;
@@ -89,6 +137,7 @@ button.secondary{ background:var(--surface-2); color:var(--ink); border:1px soli
   pointer-events: none;
   z-index: 9999;
 }
+
 /* Scenario */
 .scenario{
   min-height: clamp(240px, 52svh, 460px);
@@ -115,7 +164,9 @@ button.secondary{ background:var(--surface-2); color:var(--ink); border:1px soli
   box-shadow:var(--shadow);
 }
 
-/* ===== Confidence modal (centered) ===== */
+/* =========================
+   Confidence Modal
+   ========================= */
 .confidence{
   position: fixed;
   top: 0; right: 0; bottom: 0; left: 0;
@@ -129,6 +180,7 @@ button.secondary{ background:var(--surface-2); color:var(--ink); border:1px soli
   align-items: center;
   justify-content: center;
 }
+
 .conf-wrap{
   width: min(92vw, 520px);
   background: var(--surface);
@@ -137,26 +189,48 @@ button.secondary{ background:var(--surface-2); color:var(--ink); border:1px soli
   box-shadow: var(--shadow);
   padding: clamp(16px, 3.5vw, 28px);
 }
-.conf-title{ text-align:center; font-size:clamp(18px, 2.4vw, 22px); margin-bottom:.75rem; }
-.conf-grid{ display:grid; grid-template-columns:repeat(5, 1fr); gap:10px; }
+
+.conf-title{
+  text-align:center;
+  font-size:clamp(18px, 2.4vw, 22px);
+  margin-bottom:.75rem;
+}
+
+.conf-grid{
+  display:grid;
+  grid-template-columns:repeat(5, 1fr);
+  gap:10px;
+}
+
 .conf{
   padding:.8rem 0; font-size:clamp(16px, 2.2vw, 18px);
   background:var(--surface-2); color:var(--ink);
   border:1px solid #222838; border-radius:12px;
 }
-.conf:hover,.conf:focus{ outline:2px solid var(--primary); outline-offset:1px; }
+.conf:hover,
+.conf:focus{ outline:2px solid var(--primary); outline-offset:1px; }
 
-/* ===== Results ===== */
-.done-card{ background:var(--surface-2); padding:14px; border-radius:14px; border:1px solid #222838; }
-.apa{ background:#0f141b; color:#d9e3ea; padding:12px; border-radius:12px; border:1px solid #1e2433; overflow-x:auto; }
+/* =========================
+   Results
+   ========================= */
+.done-card{
+  background:var(--surface-2);
+  padding:14px; border-radius:14px; border:1px solid #222838;
+}
+.apa{
+  background:#0f141b; color:#d9e3ea;
+  padding:12px; border-radius:12px; border:1px solid #1e2433;
+  overflow-x:auto;
+}
 
-/* Tiny devices */
+/* =========================
+   Media Queries
+   ========================= */
 @media (max-width: 360px){
   .scenario{ min-height: clamp(260px, 58svh, 520px); }
   .scenario .line{ font-size: clamp(16px, 5.2vw, 18px); }
 }
 
-/* Desktop tweak */
 @media (min-width: 1024px){
   .scenario{ min-height: clamp(320px, 42vh, 520px); }
 }

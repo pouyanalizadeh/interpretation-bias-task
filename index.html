@@ -2,32 +2,72 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
     <title>Partner-Caregiver Interpretation Task</title>
-    <!-- cache-bust with ?v=4 so mobile won’t use stale CSS -->
-    <link rel="stylesheet" href="./styles.css?v=9" />
+    <!-- cache-bust so mobile won’t use stale CSS -->
+    <link rel="stylesheet" href="./styles.css?v=10" />
   </head>
+
   <body>
-    <!-- Instructions -->
-    <section id="screen-instructions" class="screen show">
-      <div class="card">
-        <h1>Interpretation Task (Partner-Caregiver Study)</h1>
-        <p class="muted">Enter a participant ID (or leave blank) and press Start.</p>
-        <label for="pid" class="label">Participant ID</label>
-        <input id="pid" placeholder="e.g., P001" />
-        <div class="row">
-          <button id="startBtn" class="primary">Start</button>
+    <!-- ===== Instructions Screen ===== -->
+    <section id="screen-instructions" class="screen show" role="region" aria-labelledby="inst-title">
+      <div class="inst-card">
+        <header class="inst-header">
+          <h1 id="inst-title">Partner-Caregiver Interpretation Assessment</h1>
+          <p class="subtitle">Please read before you begin</p>
+        </header>
+
+        <div class="inst-content">
+          <ol class="inst-list">
+            <li>
+              <strong>Eligibility</strong><br />
+              This task is intended for married partners who have been married (and living together) for
+              <span class="editable" data-key="minYears">at least two years</span>. Results may not be valid otherwise.
+            </li>
+            <li>
+              <strong>How the task works</strong><br />
+              You’ll read short, four-line scenarios. Each is intentionally ambiguous and can be understood in different ways.
+              Choose the option that feels closest to your thoughts. <em>There are no right or wrong answers.</em>
+            </li>
+            <li>
+              <strong>Practice (not recorded)</strong><br />
+              Before the main block, you’ll do <span class="editable" data-key="nPractice">two</span> neutral, not-health-related
+              scenarios to get familiar with the task. Your responses to these practice items <em>are not recorded</em>.
+            </li>
+            <li>
+              <strong>Privacy</strong><br />
+              Your responses are handled confidentially and analyzed in aggregate. Individual data are not shared outside the research team.
+            </li>
+          </ol>
+
+          <details class="inst-details">
+            <summary>Copyright &amp; Use</summary>
+            <p class="smallprint">
+              This task was <strong>designed, developed, and tested by Pouyan Alizadeh and Ali Khatibi</strong>.
+              All rights reserved. Any use, reproduction, or distribution requires prior <strong>written consent</strong>
+              from the authors.
+            </p>
+          </details>
         </div>
-        <p class="muted">Tips: Use keys 1/2 to choose and 1–5 for confidence.</p>
+
+        <footer class="inst-footer">
+          <button id="btn-begin" class="primary">I’m ready to begin</button>
+          <p class="footnote smallprint">
+            By continuing, you confirm you have read and meet the eligibility criteria.
+          </p>
+        </footer>
       </div>
     </section>
 
-    <!-- Task -->
+    <!-- ===== Task Screen ===== -->
     <section id="screen-task" class="screen hidden">
       <div id="fixation" class="fixation" style="display:none">+</div>
 
-      <!-- SINGLE-COLUMN LAYOUT: scenario then answers -->
       <div class="task-wrap">
+        <!-- Scenario -->
         <div id="scenario" class="scenario">
           <div id="line1" class="line"></div>
           <div id="line2" class="line"></div>
@@ -35,6 +75,7 @@
           <div id="line4" class="line strong"></div>
         </div>
 
+        <!-- Answers -->
         <div id="answers" class="answers" style="display:none">
           <button id="opt1" class="answer-btn" data-index="0"></button>
           <button id="opt2" class="answer-btn" data-index="1"></button>
@@ -56,7 +97,7 @@
       </div>
     </section>
 
-    <!-- Results -->
+    <!-- ===== Results Screen ===== -->
     <section id="screen-results" class="screen hidden">
       <div class="card">
         <h2>Results</h2>
@@ -89,7 +130,6 @@
 
     <!-- Load data then app -->
     <script src="./scenarios.js?v=4"></script>
-    <script src="./app.js?v=5"></script>
+    <script src="./app.js?v=6"></script>
   </body>
 </html>
-

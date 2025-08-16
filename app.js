@@ -5,41 +5,51 @@ const shuffle = (arr) => { const a = arr.slice(); for (let i=a.length-1;i>0;i--)
 const makeSessionId = () => "S-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,8);
 const cssVar = (name, fallback) => (getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback);
 
+// =========================================================
+// PRACTICE TRIALS (NOT RECORDED)
+// =========================================================
+window.PRACTICE_TRIALS = [
+  {
+    id: "P1",
+    type: "neutral",
+    lines: [
+      "You are waiting at a bus stop.",
+      "A person nearby checks their watch.",
+      "A bus approaches from a distance.",
+      "You wonder if it’s the one you need."
+    ],
+    options: [
+      { label: "It’s arriving soon", valence: "neutral" },
+      { label: "It’s going elsewhere", valence: "neutral" }
+    ],
+    record: false
+  },
+  {
+    id: "P2",
+    type: "neutral",
+    lines: [
+      "You and your partner plan dinner.",
+      "A friend texts about meeting tomorrow.",
+      "You check the fridge for ingredients.",
+      "You think about what to cook tonight."
+    ],
+    options: [
+      { label: "Pasta tonight", valence: "neutral" },
+      { label: "Salad tonight", valence: "neutral" }
+    ],
+    record: false
+  }
+];
+
 // ---------- cache DOM ----------
 const screens = { instructions: $("#screen-instructions"), task: $("#screen-task"), results: $("#screen-results") };
-const fixation = $("#fixation");
-fixation.style.display = 'none';
+const fixation = $("#fixation"); fixation.style.display = 'none';
 const scenarioBox = $("#scenario");
 const lines = [$("#line1"), $("#line2"), $("#line3"), $("#line4")];
 const answersBox = $("#answers");
 const btns = [$("#opt1"), $("#opt2")];
 const confBox = $("#confidence");
 const confBtns = Array.from(document.querySelectorAll(".conf"));
-const doneRow = $("#doneRow");
-const downloadBtn = $("#downloadBtn");
-const restartBtn = $("#restartBtn");
-const startBtn = $("#startBtn");
-const pidInput = $("#pid");
-
-function fixationShow() {
-  fixation.style.display = 'flex';   // use FLEX to match CSS
-}
-
-function fixationHide() {
-  fixation.style.display = 'none';
-}
-
-/**
- * Show fixation for a given duration (ms), then auto-hide.
- * Usage: await fixationBlink(700);
- */
-async function fixationBlink(ms = 700) {
-  fixationShow();
-  await sleep(ms);
-  fixationHide();
-}
-
-
 
 // results page elements
 const metaLine = $("#metaLine");
@@ -59,7 +69,6 @@ const apaText = $("#apaText");
 const dlCsv = $("#dlCsv");
 const dlJson = $("#dlJson");
 const copyApa = $("#copyApa");
-const printPdf = $("#printPdf");
 const again = $("#again");
 
 // chart canvases
@@ -76,6 +85,7 @@ const trials = (window.SCENARIOS || []).map((s) => ({
     { label: s.lines[3].replace("____", s.benign), valence: "benign" },
     { label: s.lines[3].replace("____", s.threat), valence: "threat" },
   ],
+  record: true
 }));
 
 // ---------- state ----------
@@ -91,18 +101,8 @@ let rtConfStart = 0;
 
 // ---------- math helpers ----------
 const mean = (xs) => xs.length ? xs.reduce((a,b)=>a+b,0)/xs.length : 0;
-const sd = (xs) => {
-  if (xs.length < 2) return 0;
-  const m = mean(xs);
-  const v = xs.reduce((s,x)=>s+(x-m)*(x-m),0)/(xs.length-1);
-  return Math.sqrt(v);
-};
-const percentile = (xs, p) => {
-  if (!xs.length) return 0;
-  const a = xs.slice().sort((x,y)=>x-y);
-  const idx = Math.min(a.length-1, Math.max(0, Math.round((p/100)*(a.length-1))));
-  return a[idx];
-};
+const sd = (xs) => { if (xs.length < 2) return 0; const m = mean(xs); const v = xs.reduce((s,x)=>s+(x-m)*(x-m),0)/(xs.length-1); return Math.sqrt(v); };
+const percentile = (xs, p) => { if (!xs.length) return 0; const a = xs.slice().sort((x,y)=>x-y); const idx = Math.min(a.length-1, Math.max(0, Math.round((p/100)*(a.length-1)))); return a[idx]; };
 const round2 = (x) => (Math.round(x*100)/100).toFixed(2);
 
 // ---------- UI helpers ----------
@@ -114,10 +114,7 @@ function showScreen(name){
   });
 }
 
-async function showFixation(ms = 700){
-  await fixationBlink(ms); // uses fixationShow/Hide under the hood
-}
-
+async function showFixation(ms = 700){ fixation.style.display='flex'; await sleep(ms); fixation.style.display='none'; }
 async function showScenarioLines(textLines){
   lines.forEach((el)=>{ el.textContent=""; });
   lines[0].textContent = textLines[0]; await sleep(800);
@@ -125,34 +122,21 @@ async function showScenarioLines(textLines){
   lines[2].textContent = textLines[2]; await sleep(800);
   lines[3].textContent = textLines[3];
 }
-
-function showAnswers(opts){
-  btns.forEach((b,i)=>{ b.disabled=false; b.textContent=opts[i].label; });
-  answersBox.style.display="grid";
-}
+function showAnswers(opts){ btns.forEach((b,i)=>{ b.disabled=false; b.textContent=opts[i].label; }); answersBox.style.display="grid"; }
 function hideAnswers(){ answersBox.style.display="none"; }
-function showConfidence(){
-  confBox.classList.add("is-open");
-}
-function hideConfidence(){
-  confBox.classList.remove("is-open");
-}
+function showConfidence(){ confBox.classList.add("is-open"); }
+function hideConfidence(){ confBox.classList.remove("is-open"); }
 
 // ---------- trial flow ----------
 function runTrial(trial, indexInBlock){
   return new Promise(async (resolve) => {
-    // fixation
     scenarioBox.style.display = "none";
     hideAnswers();
     await showFixation(700);
 
-    fixationHide();
- 
-    // scenario
     scenarioBox.style.display = "block";
     await showScenarioLines(trial.lines);
 
-    // choices
     showAnswers(trial.options);
     choiceIdx = null; confidenceVal = null;
     rtChoiceStart = performance.now();
@@ -162,10 +146,7 @@ function runTrial(trial, indexInBlock){
       if(!btn) return;
       commitChoice(Number(btn.dataset.index));
     };
-    const onKeyChoice = (e) => {
-      if (e.key === "1") commitChoice(0);
-      if (e.key === "2") commitChoice(1);
-    };
+    const onKeyChoice = (e) => { if (e.key === "1") commitChoice(0); if (e.key === "2") commitChoice(1); };
     answersBox.addEventListener("click", onClickChoice);
     window.addEventListener("keydown", onKeyChoice);
 
@@ -174,17 +155,11 @@ function runTrial(trial, indexInBlock){
       btns.forEach(b=> b.disabled = true);
       hideAnswers();
 
-      // confidence
       rtConfStart = performance.now();
       showConfidence();
 
-      const onClickConf = (e) => {
-        const v = Number(e.currentTarget.dataset.val);
-        if (v>=1 && v<=5) commitConfidence(v);
-      };
-      const onKeyConf = (e) => {
-        if (["1","2","3","4","5"].includes(e.key)) commitConfidence(Number(e.key));
-      };
+      const onClickConf = (e) => { const v = Number(e.currentTarget.dataset.val); if (v>=1 && v<=5) commitConfidence(v); };
+      const onKeyConf = (e) => { if (["1","2","3","4","5"].includes(e.key)) commitConfidence(Number(e.key)); };
       confBtns.forEach(btn => btn.addEventListener("click", onClickConf));
       window.addEventListener("keydown", onKeyConf);
 
@@ -193,39 +168,33 @@ function runTrial(trial, indexInBlock){
         confBtns.forEach(btn => btn.removeEventListener("click", onClickConf));
         window.removeEventListener("keydown", onKeyConf);
         hideConfidence();
-
-        // cleanup listeners from choice stage
         answersBox.removeEventListener("click", onClickChoice);
         window.removeEventListener("keydown", onKeyChoice);
 
-        const chosen = trial.options[choiceIdx];
-        const rec = {
-          timestamp_iso: new Date().toISOString(),
-          participant_id: participantId,
-          session_id: sessionId,
-          device_useragent: deviceInfo.userAgent,
-          device_screen: `${deviceInfo.width}x${deviceInfo.height}`,
-          fullscreen_ok: fullscreenOK ? 1 : 0,
-
-          trial_order_index: indexInBlock,
-          trial_id: trial.id,
-          line1: trial.lines[0],
-          line2: trial.lines[1],
-          line3: trial.lines[2],
-          line4: trial.lines[3],
-
-          chosen_index: choiceIdx,
-          chosen_label: chosen.label,
-          chosen_valence: chosen.valence,
-
-          rt_choice_ms: Math.round(performance.now() - rtChoiceStart),
-          rt_conf_ms: Math.round(performance.now() - rtConfStart),
-          confidence: Number(confidenceVal),
-        };
-
         scenarioBox.style.display = "none";
         answersBox.style.display = "none";
-        resolve(rec);
+
+        if(trial.record){ // ✅ only save if record==true
+          const chosen = trial.options[choiceIdx];
+          const rec = {
+            timestamp_iso: new Date().toISOString(),
+            participant_id: participantId,
+            session_id: sessionId,
+            device_useragent: deviceInfo.userAgent,
+            device_screen: `${deviceInfo.width}x${deviceInfo.height}`,
+            fullscreen_ok: fullscreenOK ? 1 : 0,
+            trial_order_index: indexInBlock,
+            trial_id: trial.id,
+            line1: trial.lines[0], line2: trial.lines[1], line3: trial.lines[2], line4: trial.lines[3],
+            chosen_index: choiceIdx, chosen_label: chosen.label, chosen_valence: chosen.valence,
+            rt_choice_ms: Math.round(performance.now() - rtChoiceStart),
+            rt_conf_ms: Math.round(performance.now() - rtConfStart),
+            confidence: Number(confidenceVal),
+          };
+          resolve(rec);
+        } else {
+          resolve(null); // ✅ practice trial, no record
+        }
       }
     }
   });
@@ -233,26 +202,26 @@ function runTrial(trial, indexInBlock){
 
 // ---------- start / finish ----------
 async function startTask(){
-  participantId = (pidInput.value || "").trim();
-  if(!participantId){
-    alert("Please enter a Participant ID to begin.");
-    pidInput.focus();
-    return;
-  }
-  try{
-    if(document.fullscreenElement == null){ await document.documentElement.requestFullscreen(); }
-    fullscreenOK = 1;
-  }catch{ fullscreenOK = 0; }
+  try{ if(document.fullscreenElement == null){ await document.documentElement.requestFullscreen(); fullscreenOK = 1; } }catch{ fullscreenOK = 0; }
 
   showScreen("task");
-  const order = shuffle(trials);
   results = [];
-  for(let i=0;i<order.length;i++){
-    const rec = await runTrial(order[i], i+1);
-    results.push(rec);
+
+  // 1) Run practice (not recorded)
+  for(let i=0;i<window.PRACTICE_TRIALS.length;i++){
+    await runTrial(window.PRACTICE_TRIALS[i], i+1);
   }
+
+  // 2) Run main block
+  const order = shuffle(trials);
+  for(let j=0;j<order.length;j++){
+    const rec = await runTrial(order[j], j+1);
+    if(rec) results.push(rec);
+  }
+
   generateAndShowResults();
 }
+
 
 // ---------- CSV/JSON ----------
 function resultsToCSV(rows){
