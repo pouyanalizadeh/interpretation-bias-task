@@ -70,6 +70,8 @@ const dlCsv = $("#dlCsv");
 const dlJson = $("#dlJson");
 const copyApa = $("#copyApa");
 const again = $("#again");
+const savePng = $("#savePng");
+const savePdf = $("#savePdf");
 
 // chart canvases
 const ctxChoices = document.getElementById("chartChoices");
@@ -201,26 +203,20 @@ function runTrial(trial, indexInBlock){
 async function startTask(){
   let fatalErr = null;
 
-  // best-effort fullscreen
   try {
     if (document.fullscreenElement == null) {
       await document.documentElement.requestFullscreen();
       fullscreenOK = 1;
     }
-  } catch {
-    fullscreenOK = 0;
-  }
+  } catch { fullscreenOK = 0; }
 
   showScreen("task");
   results = [];
 
   try {
-    // Practice first
     for(let i=0;i<window.PRACTICE_TRIALS.length;i++){
       await runTrial(window.PRACTICE_TRIALS[i], i+1);
     }
-
-    // Main block
     const order = shuffle(trials);
     for(let j=0;j<order.length;j++){
       const rec = await runTrial(order[j], j+1);
@@ -234,10 +230,9 @@ async function startTask(){
     renderResults(summary);
     if (metaLine) {
       metaLine.textContent = fatalErr
-        ? `Session ${sessionId} — Note: an error occurred (${fatalErr.message}). Partial results shown.`
+        ? `Session ${sessionId} — Note: an error occurred (${fatalErr?.message || fatalErr}). Partial results shown.`
         : `Session ${sessionId}`;
     }
-    // build charts (guard if Chart.js missing)
     try { buildCharts(summary, results); } catch (e) { console.warn("Chart build skipped:", e.message); }
     showScreen("results");
   }
@@ -264,17 +259,6 @@ const mean = (xs) => xs.length ? xs.reduce((a,b)=>a+b,0)/xs.length : 0;
 const sd = (xs) => { if (xs.length < 2) return 0; const m = mean(xs); const v = xs.reduce((s,x)=>s+(x-m)*(x-m),0)/(xs.length-1); return Math.sqrt(v); };
 const round2 = (x) => (Math.round(x*100)/100).toFixed(2);
 
-// Wilson 95% CI for proportion
-function ciWilson(k, n, z=1.96){
-  if (n === 0) return [0, 0];
-  const p = k/n;
-  const z2 = z*z;
-  const denom = 1 + z2/n;
-  const center = (p + z2/(2*n)) / denom;
-  const half = (z * Math.sqrt((p*(1-p) + z2/(4*n))/n)) / denom;
-  return [Math.max(0, center - half), Math.min(1, center + half)];
-}
-
 function computeSummary(rows){
   const n = rows.length;
   const benign = rows.filter(r=> r.chosen_valence==="benign");
@@ -291,12 +275,8 @@ function computeSummary(rows){
                  : pb < 0.45 ? "negative (threat-leaning)"
                  : "mixed / neutral";
 
-  // CIs
-  const [pb_lo, pb_hi] = ciWilson(nb, n);
-  const [pt_lo, pt_hi] = ciWilson(nt, n);
-
   return {
-    n, nb, nt, pb, pt, pb_lo, pb_hi, pt_lo, pt_hi,
+    n, nb, nt, pb, pt,
     rt_b_m: mean(rt_b), rt_b_sd: sd(rt_b),
     rt_t_m: mean(rt_t), rt_t_sd: sd(rt_t),
     conf_b_m: mean(conf_b), conf_t_m: mean(conf_t),
@@ -330,164 +310,125 @@ function renderResults(summary){
   if (apaText) apaText.innerHTML = buildApaParagraph(summary);
 }
 
-// ---------- Charts ----------
+// ---------- Charts (robust, no growth) ----------
+const CHARTS = {}; // id -> Chart instance
+
+function safeChart(ctx, id, config){
+  if (!ctx) return;
+  if (CHARTS[id]) { try { CHARTS[id].destroy(); } catch(_){} }
+  // Lock device pixel ratio scaling to avoid bounce
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  ctx.getContext && ctx.getContext("2d"); // ensure 2d context exists
+  const chart = new Chart(ctx, {
+    ...config,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 600 },
+      ...config.options
+    },
+    plugins: config.plugins || []
+  });
+  CHARTS[id] = chart;
+}
+
 function buildCharts(s, rows){
   if (typeof Chart === "undefined") return;
-
   const benignColor = cssVar("--primary", "#5dd2ff");
   const threatColor = cssVar("--threat", "#ff6b6b");
   const gridColor = "rgba(200,210,220,.16)";
   const labelColor = cssVar("--ink", "#e9eef2");
-  const bgCard = "transparent";
 
-  // Error bar plugin (upper/lower around the bar's value)
-  const errorBarPlugin = {
-    id: 'errorBarPlugin',
-    afterDatasetsDraw(chart, args, pluginOptions){
-      const { ctx, scales } = chart;
-      chart.data.datasets.forEach((ds, di) => {
-        if (!ds.errorBars) return;
-        const meta = chart.getDatasetMeta(di);
-        meta.data.forEach((el, i) => {
-          const value = ds.data[i];
-          const [lower, upper] = ds.errorBars[i]; // diffs from mean
-          const x = el.x;
-          const yHi = scales.y.getPixelForValue(value + upper);
-          const yLo = scales.y.getPixelForValue(value - lower);
-          ctx.save();
-          ctx.strokeStyle = labelColor; ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.moveTo(x, yHi); ctx.lineTo(x, yLo); ctx.stroke();
-          // caps
-          ctx.beginPath();
-          ctx.moveTo(x-6, yHi); ctx.lineTo(x+6, yHi);
-          ctx.moveTo(x-6, yLo); ctx.lineTo(x+6, yLo);
-          ctx.stroke();
-          ctx.restore();
-        });
-      });
+  // 1) Proportions
+  safeChart(ctxChoices, "choices", {
+    type: 'bar',
+    data: {
+      labels: ["Benign","Threat"],
+      datasets: [{
+        label: "Proportion",
+        data: [s.pb || 0, s.pt || 0],
+        backgroundColor: [benignColor, threatColor]
+      }]
+    },
+    options: {
+      scales: {
+        x: { ticks: { color: labelColor }, grid: { color: gridColor }},
+        y: { min: 0, max: 1, ticks: { color: labelColor }, grid: { color: gridColor } }
+      },
+      plugins: { legend: { display: false } }
     }
-  };
-  Chart.register(errorBarPlugin);
+  });
 
-  // 1) Proportions with 95% CI (Wilson)
-  if (ctxChoices){
-    const means = [s.pb, s.pt];
-    const ciLower = [s.pb - s.pb_lo, s.pt - s.pt_lo];   // distance from mean
-    const ciUpper = [s.pb_hi - s.pb, s.pt_hi - s.pt];   // distance from mean
-
-    new Chart(ctxChoices, {
-      type: 'bar',
-      data: {
-        labels: ["Benign", "Threat"],
-        datasets: [{
-          label: "Proportion",
-          data: means,
-          backgroundColor: [benignColor, threatColor],
-          errorBars: means.map((m, i) => [ciLower[i], ciUpper[i]])
-        }]
+  // 2) Reaction times
+  safeChart(ctxRT, "rt", {
+    type: 'bar',
+    data: {
+      labels: ["Benign","Threat"],
+      datasets: [{
+        label: "RT (ms)",
+        data: [s.rt_b_m || 0, s.rt_t_m || 0],
+        backgroundColor: [benignColor, threatColor]
+      }]
+    },
+    options: {
+      scales: {
+        x: { ticks: { color: labelColor }, grid: { color: gridColor }},
+        y: { beginAtZero: true, ticks: { color: labelColor }, grid: { color: gridColor } }
       },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { ticks: { color: labelColor } , grid: { color: gridColor } },
-          y: { min: 0, max: 1, ticks: { color: labelColor }, grid: { color: gridColor } }
-        }
-      }
-    });
-  }
+      plugins: { legend: { display: false } }
+    }
+  });
 
-  // 2) Reaction time means ± SD
-  if (ctxRT){
-    const means = [s.rt_b_m || 0, s.rt_t_m || 0];
-    const sds = [s.rt_b_sd || 0, s.rt_t_sd || 0];
-
-    new Chart(ctxRT, {
-      type: 'bar',
-      data: {
-        labels: ["Benign", "Threat"],
-        datasets: [{
-          label: "RT (ms)",
-          data: means,
-          backgroundColor: [benignColor, threatColor],
-          errorBars: sds.map(sd => [sd, sd])
-        }]
+  // 3) Confidence
+  safeChart(ctxConf, "conf", {
+    type: 'bar',
+    data: {
+      labels: ["Benign","Threat"],
+      datasets: [{
+        label: "Confidence (1–5)",
+        data: [s.conf_b_m || 0, s.conf_t_m || 0],
+        backgroundColor: [benignColor, threatColor]
+      }]
+    },
+    options: {
+      scales: {
+        x: { ticks: { color: labelColor }, grid: { color: gridColor }},
+        y: { min: 1, max: 5, ticks: { color: labelColor }, grid: { color: gridColor } }
       },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { ticks: { color: labelColor }, grid: { color: gridColor } },
-          y: { ticks: { color: labelColor }, grid: { color: gridColor } }
-        }
-      }
-    });
-  }
+      plugins: { legend: { display: false } }
+    }
+  });
 
-  // 3) Confidence means
-  if (ctxConf){
-    const means = [s.conf_b_m || 0, s.conf_t_m || 0];
-    new Chart(ctxConf, {
-      type: 'bar',
-      data: {
-        labels: ["Benign", "Threat"],
-        datasets: [{
-          label: "Confidence (1–5)",
-          data: means,
-          backgroundColor: [benignColor, threatColor]
-        }]
+  // 4) Sequence strip
+  const seq = rows.map(r => r.chosen_valence === "benign" ? 1 : -1);
+  const colors = rows.map(r => r.chosen_valence === "benign" ? benignColor : threatColor);
+  safeChart(ctxSeq, "seq", {
+    type: 'bar',
+    data: {
+      labels: rows.map((_,i)=>i+1),
+      datasets: [{
+        data: seq,
+        backgroundColor: colors,
+        borderWidth: 0,
+        barPercentage: 1.0,
+        categoryPercentage: 1.0
+      }]
+    },
+    options: {
+      scales: {
+        x: { display: false },
+        y: { min: -1, max: 1, display: false }
       },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { ticks: { color: labelColor }, grid: { color: gridColor } },
-          y: { min: 1, max: 5, ticks: { color: labelColor }, grid: { color: gridColor } }
-        }
-      }
-    });
-  }
-
-  // 4) Sequence strip (1 = benign, -1 = threat)
-  if (ctxSeq){
-    const seq = rows.map(r => r.chosen_valence === "benign" ? 1 : -1);
-    const colors = rows.map(r => r.chosen_valence === "benign" ? benignColor : threatColor);
-
-    new Chart(ctxSeq, {
-      type: 'bar',
-      data: {
-        labels: rows.map((_, i) => i+1),
-        datasets: [{
-          data: seq,
-          backgroundColor: colors,
-          borderWidth: 0,
-          barPercentage: 1.0,
-          categoryPercentage: 1.0
-        }]
-      },
-      options: {
-        responsive: true, maintainAspectRatio: false,
-        plugins: { legend: { display: false } },
-        scales: {
-          x: { display: false },
-          y: { min: -1, max: 1, display: false }
-        }
-      }
-    });
-  }
+      plugins: { legend: { display: false } }
+    }
+  });
 }
 
-// ---------- APA render + show (kept for reference) ----------
-function generateAndShowResults(){
-  const summary = computeSummary(results);
-  renderResults(summary);
-  try { buildCharts(summary, results); } catch(e){}
-  showScreen("results");
+// ---------- Downloads & Actions ----------
+function resultsToPayload(){
+  return { session_id: sessionId, device: deviceInfo, summary: computeSummary(results), trials: results };
 }
 
-// ---------- downloads & actions (guarded) ----------
 if (dlCsv) {
   dlCsv.addEventListener("click", () => {
     const csv = resultsToCSV(results);
@@ -500,8 +441,7 @@ if (dlCsv) {
 }
 if (dlJson) {
   dlJson.addEventListener("click", () => {
-    const payload = { session_id: sessionId, device: deviceInfo, summary: computeSummary(results), trials: results };
-    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const blob = new Blob([JSON.stringify(resultsToPayload(), null, 2)], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url; a.download = `ib_task_${sessionId}.json`; a.click();
@@ -511,21 +451,45 @@ if (dlJson) {
 if (copyApa) {
   copyApa.addEventListener("click", async () => {
     const tmp = document.createElement("div");
-    tmp.innerHTML = apaText.innerHTML.replace(/<[^>]+>/g, "");
+    tmp.innerHTML = (apaText?.innerHTML || "").replace(/<[^>]+>/g, "");
     const text = tmp.textContent || tmp.innerText || "";
     await navigator.clipboard.writeText(text);
     alert("APA paragraph copied to clipboard.");
   });
 }
-if (again) {
-  again.addEventListener("click", () => location.reload());
+if (savePng) {
+  savePng.addEventListener("click", () => {
+    const charts = ["choices","rt","conf","seq"].map(id => CHARTS[id]).filter(Boolean);
+    charts.forEach((ch, i) => {
+      const a = document.createElement("a");
+      a.href = ch.toBase64Image();
+      a.download = `ib_${sessionId}_chart_${i+1}.png`;
+      a.click();
+    });
+  });
 }
+if (savePdf) {
+  savePdf.addEventListener("click", async () => {
+    const { jsPDF } = window.jspdf || {};
+    if (!window.html2canvas || !jsPDF) return alert("PDF libraries not loaded.");
+    const root = document.getElementById("reportRoot");
+    // Render DOM to canvas for a WYSIWYG report (APA + charts)
+    const canvas = await html2canvas(root, { backgroundColor: "#12141a", scale: 2 });
+    const img = canvas.toDataURL("image/png");
+    const pdf = new jsPDF({ unit: "pt", format: "a4" });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
+    const w = canvas.width * ratio;
+    const h = canvas.height * ratio;
+    const x = (pageW - w) / 2;
+    const y = 20;
+    pdf.addImage(img, "PNG", x, y, w, h);
+    pdf.save(`ib_task_report_${sessionId}.pdf`);
+  });
+}
+if (again) { again.addEventListener("click", () => location.reload()); }
 
 // ---------- begin button ----------
 const btnBegin = $("#btn-begin");
-if (btnBegin) {
-  btnBegin.addEventListener("click", () => {
-    showScreen("task");
-    startTask();
-  });
-}
+if (btnBegin) { btnBegin.addEventListener("click", () => { showScreen("task"); startTask(); }); }
