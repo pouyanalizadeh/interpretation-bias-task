@@ -1,288 +1,143 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <title>Partner-Caregiver Interpretation Task</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <style>
-    /* ---------- styles (no external CSS needed) ---------- */
-    * { box-sizing: border-box; }
-    html, body { height: 100%; }
-    body {
-      margin: 0;
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
-      background: #fafafa;
-      color: #111;
-    }
-    .screen { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
-    .card { background:#fff; padding:24px; border-radius:16px; box-shadow:0 10px 30px rgba(0,0,0,.08); width:min(860px,94vw); }
-    .btn { padding:10px 16px; border:1px solid #ddd; background:#fff; border-radius:10px; cursor:pointer; font:inherit; }
-    .btn.primary { background:#111; color:#fff; border-color:#111; }
-    .btn:active { transform: translateY(1px); }
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <title>Partner-Caregiver Interpretation Task</title>
+    <link rel="stylesheet" href="./styles.css?v=20" />
+  </head>
 
-    .scenario { width:min(800px,92vw); margin:10px auto 0; }
-    .scenario-line { min-height:1.6em; margin:8px 0; font-size:clamp(18px,2.2vw,22px); line-height:1.35; text-align:left; }
-    .fixation { position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); font-size:clamp(36px,6vw,56px); line-height:1; user-select:none; pointer-events:none; }
+  <body>
+    <!-- ===== Instructions ===== -->
+    <section id="screen-instructions" class="screen show" role="region" aria-labelledby="inst-title">
+      <div class="inst-card">
+        <header class="inst-header">
+          <h1 id="inst-title">Partner-Caregiver Interpretation Assessment</h1>
+          <p class="subtitle">Please read before you begin</p>
+        </header>
 
-    .answers { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:16px; width:min(800px,92vw); }
-    .option { text-align:left; }
-    .confidence { display:none; align-items:center; gap:12px; margin-top:16px; width:min(800px,92vw); }
-    #confidence-range { width:220px; }
+        <div class="inst-content">
+          <ol class="inst-list">
+            <li><strong>Eligibility.</strong> Married partners, cohabiting for <em>≥ 2 years</em>.</li>
+            <li><strong>Task.</strong> Four-line ambiguous scenarios; pick what feels closest. No right/wrong.</li>
+            <li><strong>Practice.</strong> Two neutral practice items (not recorded).</li>
+            <li><strong>Privacy.</strong> Data summarized; individual responses are confidential.</li>
+          </ol>
+          <details class="inst-details">
+            <summary>Copyright &amp; Use</summary>
+            <p class="smallprint">
+              Designed and developed by <strong>Pouyan Alizadeh</strong> &amp; <strong>Ali Khatibi</strong>. All rights reserved.
+              Written consent is required for reuse/distribution.
+            </p>
+          </details>
+        </div>
 
-    .results-grid { display:grid; gap:8px; margin-bottom:12px; }
-    .chart-wrap { width:min(800px,92vw); background:#fff; border:1px solid #eee; border-radius:12px; padding:12px; }
-    .chart-title { margin:0 0 8px 0; font-weight:600; }
-    .chart { width:100%; height:220px; }
-    @media (max-width:520px){ .answers { grid-template-columns:1fr; } }
-
-    /* hide initially */
-    #screen-task, #screen-results, #fixation, #scenario, #answers { display:none; }
-  </style>
-</head>
-<body>
-  <!-- Instructions -->
-  <section id="screen-instructions" class="screen">
-    <div class="card">
-      <h1>Interpretation Task (Partner-Caregiver Study)</h1>
-      <p>Read each 4-line scenario. Choose the best final resolution, then rate your confidence.</p>
-      <button id="start-btn" class="btn primary">Start</button>
-    </div>
-  </section>
-
-  <!-- Task -->
-  <section id="screen-task" class="screen">
-    <div id="fixation" class="fixation">+</div>
-
-    <div id="scenario" class="scenario">
-      <div id="line1" class="scenario-line"></div>
-      <div id="line2" class="scenario-line"></div>
-      <div id="line3" class="scenario-line"></div>
-      <div id="line4" class="scenario-line"></div>
-    </div>
-
-    <div id="answers" class="answers">
-      <button id="opt1" class="btn option"></button>
-      <button id="opt2" class="btn option"></button>
-    </div>
-
-    <div id="confidence" class="confidence">
-      <label for="confidence-range">Confidence: <span id="confidence-value">3</span>/5</label>
-      <input id="confidence-range" type="range" min="1" max="5" step="1" value="3" />
-      <button id="confidence-submit" class="btn">Submit</button>
-    </div>
-  </section>
-
-  <!-- Results -->
-  <section id="screen-results" class="screen">
-    <div class="card">
-      <div id="results" class="results-grid"></div>
-      <div class="chart-wrap">
-        <p class="chart-title">Performance Summary</p>
-        <svg id="resultsChart" class="chart" viewBox="0 0 800 220" preserveAspectRatio="xMidYMid meet"></svg>
+        <footer class="inst-footer">
+          <button id="btn-begin" class="primary">I’m ready to begin</button>
+          <p class="footnote smallprint">By continuing, you confirm eligibility and consent.</p>
+        </footer>
       </div>
-      <div style="margin-top:12px;">
-        <button id="restart" class="btn">Restart</button>
+    </section>
+
+    <!-- ===== Task ===== -->
+    <section id="screen-task" class="screen hidden">
+      <div id="fixation" class="fixation" style="display:none">+</div>
+      <div class="task-wrap">
+        <div id="scenario" class="scenario">
+          <div id="line1" class="line"></div>
+          <div id="line2" class="line"></div>
+          <div id="line3" class="line"></div>
+          <div id="line4" class="line strong"></div>
+        </div>
+
+        <div id="answers" class="answers" style="display:none">
+          <button id="opt1" class="answer-btn" data-index="0"></button>
+          <button id="opt2" class="answer-btn" data-index="1"></button>
+        </div>
       </div>
-    </div>
-  </section>
 
-  <script>
-    // ---------- helpers ----------
-    function $(sel){ const el=document.querySelector(sel); if(!el) console.error("Missing element:", sel); return el; }
-    const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
-    function shuffle(a){ const arr=a.slice(); for(let i=arr.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [arr[i],arr[j]]=[arr[j],arr[i]];} return arr;}
-    function sid(){ return "S-"+Date.now().toString(36)+"-"+Math.random().toString(36).slice(2,8); }
+      <div id="confidence" class="confidence hidden">
+        <div class="conf-wrap">
+          <div class="conf-title">How confident are you?</div>
+          <div class="conf-grid">
+            <button class="conf" data-val="1">1</button>
+            <button class="conf" data-val="2">2</button>
+            <button class="conf" data-val="3">3</button>
+            <button class="conf" data-val="4">4</button>
+            <button class="conf" data-val="5">5</button>
+          </div>
+        </div>
+      </div>
+    </section>
 
-    // ---------- cache ----------
-    const screens = { instructions: $("#screen-instructions"), task: $("#screen-task"), results: $("#screen-results") };
-    const fixation = $("#fixation");
-    const scenarioBox = $("#scenario");
-    const lines = [$("#line1"), $("#line2"), $("#line3"), $("#line4")];
-    const answersBox = $("#answers");
-    const btns = [$("#opt1"), $("#opt2")];
-    const confidenceBox = $("#confidence");
-    const confInput = $("#confidence-range");
-    const confValue = $("#confidence-value");
-    const confSubmit = $("#confidence-submit");
-    const resultsBox = $("#results");
-    const startBtn = $("#start-btn");
-    const restartBtn = $("#restart");
-    const svg = $("#resultsChart");
-
-    // ---------- state ----------
-    let trials = [
-      {
-        id:"T1",
-        lines:[
-          "You call your partner, but they don’t answer.",
-          "You wonder why they are not picking up.",
-          "They usually answer quickly.",
-          "This time, it’s different..."
-        ],
-        positive:"They are busy in a meeting.",
-        threat:"They are ignoring you intentionally."
-      },
-      {
-        id:"T2",
-        lines:[
-          "Your partner is late coming home.",
-          "It’s getting dark outside.",
-          "They normally text you.",
-          "You start to think..."
-        ],
-        positive:"They got stuck in traffic.",
-        threat:"They are in an accident."
-      }
-      // 👉 Add your full scenario set here in the same structure.
-    ];
-    let results = [];
-    let sessionId = sid();
-
-    // ---------- screens ----------
-    function show(el){ el.style.display = el.id==="fixation" ? "block" : (el.classList.contains("screen")?"grid":"block"); }
-    function hide(el){ el.style.display = "none"; }
-
-    // ---------- trial flow ----------
-    async function runTrial(trial){
-      // fixation
-      show(fixation); hide(scenarioBox); hide(answersBox); hide(confidenceBox);
-      await sleep(1000); hide(fixation);
-
-      // scenario lines
-      show(scenarioBox);
-      for(let i=0;i<4;i++){
-        lines[i].textContent = trial.lines[i];
-        lines[i].style.visibility = "visible";
-        await sleep(1000);
-      }
-
-      // answers: randomize order (KEY FIX)
-      const opts = shuffle([
-        { text: trial.positive, type: "positive" },
-        { text: trial.threat, type: "threat" }
-      ]);
-      btns.forEach((b,i)=>{ b.textContent=opts[i].text; b.dataset.type=opts[i].type; });
-
-      // show answers and start RT timer
-      show(answersBox);
-      const t0 = performance.now();
-
-      const choice = await new Promise(resolve=>{
-        btns.forEach(b=>b.onclick = ()=> resolve(b.dataset.type));
-      });
-      const rt = performance.now() - t0;
-
-      // confidence
-      hide(answersBox);
-      confInput.value = 3; confValue.textContent = "3";
-      confInput.oninput = ()=> confValue.textContent = confInput.value;
-      confidenceBox.style.display = "flex";
-      const conf = await new Promise(resolve=> confSubmit.onclick = ()=> resolve(Number(confInput.value)));
-      hide(confidenceBox);
-
-      return { choice, rt, conf };
-    }
-
-    async function runTask(){
-      results = [];
-      for(const trial of trials){
-        const res = await runTrial(trial);
-        results.push({ sessionId, trialId: trial.id, choice: res.choice, rt: res.rt, confidence: res.conf });
-        await sleep(350);
-      }
-      showResults();
-    }
-
-    // ---------- results ----------
-    function showResults(){
-      hide(screens.task); show(screens.results);
-
-      const positives = results.filter(r=>r.choice==="positive").length;
-      const negatives = results.filter(r=>r.choice==="threat").length;
-      const avgRT = results.length ? results.reduce((a,r)=>a+r.rt,0)/results.length : 0;
-      const avgConf = results.length ? results.reduce((a,r)=>a+r.confidence,0)/results.length : 0;
-
-      resultsBox.innerHTML = `
+    <!-- ===== Results ===== -->
+    <section id="screen-results" class="screen hidden">
+      <div class="card" id="reportRoot">
         <h2>Results</h2>
-        <div><b>Positive interpretations:</b> ${positives}</div>
-        <div><b>Negative interpretations:</b> ${negatives}</div>
-        <div><b>Average reaction time:</b> ${avgRT.toFixed(0)} ms</div>
-        <div><b>Average confidence:</b> ${avgConf.toFixed(1)}/5</div>
-      `;
+        <p id="metaLine" class="muted"></p>
 
-      drawChart([
-        { label:"Positive", value: positives },
-        { label:"Negative", value: negatives },
-        { label:"Avg RT (ms)", value: Math.round(avgRT) },
-        { label:"Avg Conf", value: Number(avgConf.toFixed(2)) }
-      ]);
-    }
+        <div class="row">
+          <div class="done-card" style="flex:1">
+            <strong>Summary</strong>
+            <div>N trials: <span id="m_n">0</span></div>
+            <div>Benign choices: <span id="m_benign">0</span> (<span id="m_prop_benign">0</span>)</div>
+            <div>Threat choices: <span id="m_threat">0</span> (<span id="m_prop_threat">0</span>)</div>
+            <div>RT (ms) benign: <span id="m_rt_b_m">0</span> ± <span id="m_rt_b_sd">0</span></div>
+            <div>RT (ms) threat: <span id="m_rt_t_m">0</span> ± <span id="m_rt_t_sd">0</span></div>
+            <div>Confidence benign / threat: <span id="m_conf_b_m">0</span> / <span id="m_conf_t_m">0</span></div>
+            <div>Pattern: <span id="m_pattern">—</span></div>
+          </div>
+        </div>
 
-    // tiny inline SVG bar chart (no Chart.js)
-    function drawChart(points){
-      // clear
-      while (svg.firstChild) svg.removeChild(svg.firstChild);
+        <h3>APA-style note</h3>
+        <pre id="apaText" class="apa"></pre>
 
-      const W=800, H=220, pad=40, barGap=20;
-      const bars = points.length;
-      const barW = (W - pad*2 - barGap*(bars-1)) / bars;
-      const maxVal = Math.max(1, ...points.map(p=>p.value));
-      const scaleY = (val)=> (H - pad - (val/maxVal)*(H - pad*2));
+        <h3 style="margin-top:1rem;">Visual summary</h3>
+        <div class="charts">
+          <div class="chart-card">
+            <div class="chart-title">Interpretation proportions</div>
+            <canvas id="chartChoices"></canvas>
+            <div class="caption">Proportion of benign vs. threat completions.</div>
+          </div>
 
-      // axes
-      const axis = document.createElementNS("http://www.w3.org/2000/svg","line");
-      axis.setAttribute("x1", pad); axis.setAttribute("y1", H-pad);
-      axis.setAttribute("x2", W-pad); axis.setAttribute("y2", H-pad);
-      axis.setAttribute("stroke", "#ccc"); axis.setAttribute("stroke-width","1");
-      svg.appendChild(axis);
+          <div class="chart-card">
+            <div class="chart-title">Reaction time (ms)</div>
+            <canvas id="chartRT"></canvas>
+            <div class="caption">Mean decision RT for benign and threat choices.</div>
+          </div>
 
-      // bars + labels
-      points.forEach((p, i)=>{
-        const x = pad + i*(barW+barGap);
-        const y = scaleY(p.value);
-        const height = H - pad - y;
+          <div class="chart-card">
+            <div class="chart-title">Confidence (1–5)</div>
+            <canvas id="chartConf"></canvas>
+            <div class="caption">Mean confidence for benign vs. threat choices.</div>
+          </div>
 
-        const rect = document.createElementNS("http://www.w3.org/2000/svg","rect");
-        rect.setAttribute("x", x);
-        rect.setAttribute("y", y);
-        rect.setAttribute("width", barW);
-        rect.setAttribute("height", height);
-        rect.setAttribute("fill", "#4a90e2");
-        svg.appendChild(rect);
+          <div class="chart-card chart-wide">
+            <div class="chart-title">Trial sequence</div>
+            <canvas id="chartSeq"></canvas>
+            <div class="caption">Each block is a trial (blue=benign, red=threat).</div>
+          </div>
+        </div>
 
-        const lbl = document.createElementNS("http://www.w3.org/2000/svg","text");
-        lbl.textContent = p.label;
-        lbl.setAttribute("x", x + barW/2);
-        lbl.setAttribute("y", H - pad + 16);
-        lbl.setAttribute("text-anchor","middle");
-        lbl.setAttribute("font-size","12");
-        lbl.setAttribute("fill","#333");
-        svg.appendChild(lbl);
+        <div class="row" style="margin-top:12px;">
+          <button id="dlCsv" class="secondary">Download CSV</button>
+          <button id="dlJson" class="secondary">Download JSON</button>
+          <button id="copyApa" class="secondary">Copy APA text</button>
+          <button id="savePng" class="secondary">Export charts (PNG)</button>
+          <button id="savePdf" class="secondary">Export full PDF report</button>
+          <button id="again" class="primary">Run Again</button>
+        </div>
+      </div>
+    </section>
 
-        const val = document.createElementNS("http://www.w3.org/2000/svg","text");
-        val.textContent = p.value;
-        val.setAttribute("x", x + barW/2);
-        val.setAttribute("y", y - 6);
-        val.setAttribute("text-anchor","middle");
-        val.setAttribute("font-size","12");
-        val.setAttribute("fill","#111");
-        svg.appendChild(val);
-      });
-    }
-
-    // ---------- init ----------
-    startBtn.onclick = ()=>{
-      hide(screens.instructions);
-      show(screens.task);
-      trials = shuffle(trials);   // shuffle trial order each run
-      runTask();
-    };
-    restartBtn.onclick = ()=>{
-      hide(screens.results);
-      show(screens.task);
-      trials = shuffle(trials);
-      runTask();
-    };
-  </script>
-</body>
+    <!-- Data + libs + app -->
+    <script src="./scenarios.js?v=4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <script src="./app.js?v=20"></script>
+  </body>
 </html>

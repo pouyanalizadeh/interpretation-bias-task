@@ -1,227 +1,495 @@
 // ---------- helpers ----------
-const $ = (sel) => {
-  const el = document.querySelector(sel);
-  if (!el) console.error("Missing element:", sel);
-  return el;
-};
+const $ = (sel) => document.querySelector(sel);
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-const shuffle = (arr) => {
-  const a = arr.slice();
-  for (let i = a.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [a[i], a[j]] = [a[j], a[i]];
+const shuffle = (arr) => { const a = arr.slice(); for (let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+const makeSessionId = () => "S-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,8);
+const cssVar = (name, fallback) => (getComputedStyle(document.documentElement).getPropertyValue(name).trim() || fallback);
+
+// =========================================================
+// PRACTICE TRIALS (NOT RECORDED)
+// =========================================================
+window.PRACTICE_TRIALS = [
+  {
+    id: "P1",
+    type: "neutral",
+    lines: [
+      "You are waiting at a bus stop.",
+      "A person nearby checks their watch.",
+      "A bus approaches from a distance.",
+      "You wonder if it’s the one you need."
+    ],
+    options: [
+      { label: "It’s arriving soon", valence: "neutral" },
+      { label: "It’s going elsewhere", valence: "neutral" }
+    ],
+    record: false
+  },
+  {
+    id: "P2",
+    type: "neutral",
+    lines: [
+      "You and your partner plan dinner.",
+      "A friend texts about meeting tomorrow.",
+      "You check the fridge for ingredients.",
+      "You think about what to cook tonight."
+    ],
+    options: [
+      { label: "Pasta tonight", valence: "neutral" },
+      { label: "Salad tonight", valence: "neutral" }
+    ],
+    record: false
   }
-  return a;
-};
-const makeSessionId = () =>
-  "S-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+];
 
 // ---------- cache DOM ----------
-const screens = {
-  instructions: $("#screen-instructions"),
-  task: $("#screen-task"),
-  results: $("#screen-results"),
-};
-const fixation = $("#fixation");
+const screens = { instructions: $("#screen-instructions"), task: $("#screen-task"), results: $("#screen-results") };
+const fixation = $("#fixation"); fixation.style.display = 'none';
 const scenarioBox = $("#scenario");
 const lines = [$("#line1"), $("#line2"), $("#line3"), $("#line4")];
 const answersBox = $("#answers");
 const btns = [$("#opt1"), $("#opt2")];
-const confidenceBox = $("#confidence");
-const confidenceInput = $("#confidence-range");
-const confidenceValue = $("#confidence-value");
-const resultsBox = $("#results");
-const startBtn = $("#start-btn");
-const restartBtn = $("#restart");
+const confBox = $("#confidence");
+const confBtns = Array.from(document.querySelectorAll(".conf"));
+
+// results page elements
+const metaLine = $("#metaLine");
+const m_n = $("#m_n");
+const m_benign = $("#m_benign");
+const m_threat = $("#m_threat");
+const m_prop_benign = $("#m_prop_benign");
+const m_prop_threat = $("#m_prop_threat");
+const m_rt_b_m = $("#m_rt_b_m");
+const m_rt_b_sd = $("#m_rt_b_sd");
+const m_rt_t_m = $("#m_rt_t_m");
+const m_rt_t_sd = $("#m_rt_t_sd");
+const m_conf_b_m = $("#m_conf_b_m");
+const m_conf_t_m = $("#m_conf_t_m");
+const m_pattern = $("#m_pattern");
+const apaText = $("#apaText");
+const dlCsv = $("#dlCsv");
+const dlJson = $("#dlJson");
+const copyApa = $("#copyApa");
+const again = $("#again");
+const savePng = $("#savePng");
+const savePdf = $("#savePdf");
+
+// chart canvases
+const ctxChoices = document.getElementById("chartChoices");
+const ctxRT = document.getElementById("chartRT");
+const ctxConf = document.getElementById("chartConf");
+const ctxSeq = document.getElementById("chartSeq");
+
+// ---------- trials ----------
+const trials = (window.SCENARIOS || []).map((s) => ({
+  id: `S${s.id}`,
+  lines: s.lines,
+  options: [
+    { label: s.lines[3].replace("____", s.benign), valence: "benign" },
+    { label: s.lines[3].replace("____", s.threat), valence: "threat" },
+  ],
+  record: true
+}));
 
 // ---------- state ----------
-let trials = [];
-let trialIndex = -1;
-let results = [];
+let participantId = "anon";
 let sessionId = makeSessionId();
-let chartInstance = null;
+let fullscreenOK = 0;
+let deviceInfo = { userAgent: navigator.userAgent, width: window.innerWidth, height: window.innerHeight };
+let results = [];
+let choiceIdx = null;
+let confidenceVal = null;
+let rtChoiceStart = 0;
+let rtConfStart = 0;
 
-// Safety guard: stop early if HTML is missing pieces
-(function sanityCheck() {
-  const required = [
-    startBtn, screens.instructions, screens.task, screens.results,
-    fixation, scenarioBox, answersBox, btns[0], btns[1],
-    confidenceBox, confidenceInput, confidenceValue, resultsBox
-  ];
-  if (required.some((x) => !x)) {
-    alert("Some required HTML elements are missing. Use the provided index.html structure.");
-  }
-})();
-
-// ---------- trial runner ----------
-async function runTrial(trial) {
-  // Show fixation
-  fixation.style.display = "block";
-  scenarioBox.style.display = "none";
-  answersBox.style.display = "none";
-  confidenceBox.style.display = "none";
-  await sleep(1000);
-  fixation.style.display = "none";
-
-  // Show scenario lines
-  scenarioBox.style.display = "block";
-  for (let i = 0; i < 4; i++) {
-    lines[i].textContent = trial.lines[i];
-    lines[i].style.visibility = "visible"; // keep fixed block height
-    await sleep(1000);
-  }
-
-  // Prepare answers in random order (KEY FIX)
-  let options = shuffle([
-    { text: trial.positive, type: "positive" },
-    { text: trial.threat, type: "threat" },
-  ]);
-  btns.forEach((btn, i) => {
-    btn.textContent = options[i].text;
-    btn.dataset.type = options[i].type;
+// ---------- UI helpers ----------
+function showScreen(name){
+  ["instructions", "task", "results"].forEach(n=>{
+    const el = screens[n]; if(!el) return;
+    if(n===name){ el.classList.add("show"); el.classList.remove("hidden"); }
+    else { el.classList.remove("show"); el.classList.add("hidden"); }
   });
+}
 
-  // Show answers
-  answersBox.style.display = "block";
-  const startTime = performance.now();
+async function showFixation(ms = 700){ fixation.style.display='flex'; await sleep(ms); fixation.style.display='none'; }
+async function showScenarioLines(textLines){
+  lines.forEach((el)=>{ el.textContent=""; });
+  lines[0].textContent = textLines[0]; await sleep(800);
+  lines[1].textContent = textLines[1]; await sleep(800);
+  lines[2].textContent = textLines[2]; await sleep(800);
+  lines[3].textContent = textLines[3];
+}
+function showAnswers(opts){
+  btns.forEach((b,i)=>{ b.disabled=false; b.textContent=opts[i].label; b.dataset.index=i; });
+  answersBox.style.display="grid";
+}
+function hideAnswers(){ answersBox.style.display="none"; }
+function showConfidence(){ confBox.classList.add("is-open"); }
+function hideConfidence(){ confBox.classList.remove("is-open"); }
 
-  return new Promise((resolve) => {
-    // Clear old handlers then bind fresh ones
-    btns.forEach((b) => (b.onclick = null));
-    btns.forEach((btn) => {
-      btn.onclick = () => {
-        const rt = performance.now() - startTime;
-        const choice = btn.dataset.type;
+// ---------- trial flow ----------
+function runTrial(trial, indexInBlock){
+  return new Promise(async (resolve) => {
+    scenarioBox.style.display = "none";
+    hideAnswers();
+    await showFixation(700);
 
-        // Hide answers, show confidence
+    scenarioBox.style.display = "block";
+    await showScenarioLines(trial.lines);
+
+    showAnswers(trial.options);
+    choiceIdx = null; confidenceVal = null;
+    rtChoiceStart = performance.now();
+
+    const onClickChoice = (e) => {
+      const btn = e.target.closest(".answer-btn");
+      if(!btn) return;
+      commitChoice(Number(btn.dataset.index));
+    };
+    const onKeyChoice = (e) => { if (e.key === "1") commitChoice(0); if (e.key === "2") commitChoice(1); };
+    answersBox.addEventListener("click", onClickChoice);
+    window.addEventListener("keydown", onKeyChoice);
+
+    async function commitChoice(idx){
+      choiceIdx = idx;
+      btns.forEach(b=> b.disabled = true);
+      hideAnswers();
+
+      rtConfStart = performance.now();
+      showConfidence();
+
+      const onClickConf = (e) => { const v = Number(e.currentTarget.dataset.val); if (v>=1 && v<=5) commitConfidence(v); };
+      const onKeyConf = (e) => { if (["1","2","3","4","5"].includes(e.key)) commitConfidence(Number(e.key)); };
+      confBtns.forEach(btn => btn.addEventListener("click", onClickConf));
+      window.addEventListener("keydown", onKeyConf);
+
+      function commitConfidence(v){
+        confidenceVal = v;
+        confBtns.forEach(btn => btn.removeEventListener("click", onClickConf));
+        window.removeEventListener("keydown", onKeyConf);
+        hideConfidence();
+        answersBox.removeEventListener("click", onClickChoice);
+        window.removeEventListener("keydown", onKeyChoice);
+
+        scenarioBox.style.display = "none";
         answersBox.style.display = "none";
-        confidenceBox.style.display = "flex";
-        confidenceInput.value = 3;
-        confidenceValue.textContent = "3";
-        confidenceInput.oninput = () => (confidenceValue.textContent = confidenceInput.value);
 
-        $("#confidence-submit").onclick = () => {
-          const conf = Number(confidenceInput.value);
-          confidenceBox.style.display = "none";
-          resolve({ choice, rt, conf });
-        };
-      };
-    });
-  });
-}
-
-// ---------- main loop ----------
-async function runTask() {
-  results = [];
-  for (trialIndex = 0; trialIndex < trials.length; trialIndex++) {
-    const trial = trials[trialIndex];
-    const res = await runTrial(trial);
-    results.push({
-      sessionId,
-      trialId: trial.id,
-      choice: res.choice,    // "positive" or "threat"
-      rt: res.rt,            // ms
-      confidence: res.conf,  // 1..5
-    });
-    await sleep(400);
-  }
-  showResults();
-}
-
-// ---------- results ----------
-function showResults() {
-  screens.task.style.display = "none";
-  screens.results.style.display = "grid";
-
-  const positives = results.filter((r) => r.choice === "positive").length;
-  const negatives = results.filter((r) => r.choice === "threat").length;
-  const avgRT = results.length ? results.reduce((a, r) => a + r.rt, 0) / results.length : 0;
-  const avgConf = results.length ? results.reduce((a, r) => a + r.confidence, 0) / results.length : 0;
-
-  resultsBox.innerHTML = `
-    <h2>Results</h2>
-    <p><b>Positive interpretations:</b> ${positives}</p>
-    <p><b>Negative interpretations:</b> ${negatives}</p>
-    <p><b>Average reaction time:</b> ${avgRT.toFixed(0)} ms</p>
-    <p><b>Average confidence:</b> ${avgConf.toFixed(1)}/5</p>
-    <canvas id="resultsChart" height="160"></canvas>
-  `;
-
-  // Destroy prior chart if any (prevents “expanding bars” crash)
-  if (chartInstance && typeof chartInstance.destroy === "function") {
-    chartInstance.destroy();
-    chartInstance = null;
-  }
-
-  const canvas = document.getElementById("resultsChart");
-  if (window.Chart && canvas) {
-    const ctx = canvas.getContext("2d");
-    chartInstance = new Chart(ctx, {
-      type: "bar",
-      data: {
-        labels: ["Positive", "Negative", "Avg RT (ms)", "Avg Confidence"],
-        datasets: [{
-          label: "Task Performance",
-          data: [positives, negatives, avgRT, avgConf],
-        }]
-      },
-      options: {
-        responsive: true,
-        animation: { duration: 300 },
-        plugins: {
-          legend: { display: false },
-          title: { display: true, text: "Performance Summary" },
-          tooltip: { intersect: false, mode: "index" }
-        },
-        scales: {
-          y: { beginAtZero: true }
+        if(trial.record){
+          const chosen = trial.options[choiceIdx];
+          const rec = {
+            timestamp_iso: new Date().toISOString(),
+            participant_id: participantId,
+            session_id: sessionId,
+            device_useragent: deviceInfo.userAgent,
+            device_screen: `${deviceInfo.width}x${deviceInfo.height}`,
+            fullscreen_ok: fullscreenOK ? 1 : 0,
+            trial_order_index: indexInBlock,
+            trial_id: trial.id,
+            line1: trial.lines[0], line2: trial.lines[1], line3: trial.lines[2], line4: trial.lines[3],
+            chosen_index: choiceIdx, chosen_label: chosen.label, chosen_valence: chosen.valence,
+            rt_choice_ms: Math.round(performance.now() - rtChoiceStart),
+            rt_conf_ms: Math.round(performance.now() - rtConfStart),
+            confidence: Number(confidenceVal),
+          };
+          resolve(rec);
+        } else {
+          resolve(null); // practice trial not recorded
         }
       }
+    }
+  });
+}
+
+// ---------- start / finish ----------
+async function startTask(){
+  let fatalErr = null;
+
+  try {
+    if (document.fullscreenElement == null) {
+      await document.documentElement.requestFullscreen();
+      fullscreenOK = 1;
+    }
+  } catch { fullscreenOK = 0; }
+
+  showScreen("task");
+  results = [];
+
+  try {
+    for(let i=0;i<window.PRACTICE_TRIALS.length;i++){
+      await runTrial(window.PRACTICE_TRIALS[i], i+1);
+    }
+    const order = shuffle(trials);
+    for(let j=0;j<order.length;j++){
+      const rec = await runTrial(order[j], j+1);
+      if(rec) results.push(rec);
+    }
+  } catch (err) {
+    fatalErr = err;
+    console.error("Task error:", err);
+  } finally {
+    const summary = computeSummary(results);
+    renderResults(summary);
+    if (metaLine) {
+      metaLine.textContent = fatalErr
+        ? `Session ${sessionId} — Note: an error occurred (${fatalErr?.message || fatalErr}). Partial results shown.`
+        : `Session ${sessionId}`;
+    }
+    try { buildCharts(summary, results); } catch (e) { console.warn("Chart build skipped:", e.message); }
+    showScreen("results");
+  }
+}
+
+// ---------- CSV/JSON ----------
+function resultsToCSV(rows){
+  const header = [
+    "timestamp_iso","participant_id","session_id","device_useragent","device_screen","fullscreen_ok",
+    "trial_order_index","trial_id","line1","line2","line3","line4","chosen_index","chosen_label",
+    "chosen_valence","rt_choice_ms","rt_conf_ms","confidence"
+  ];
+  const data = rows.map(r => header.map(h => (r[h] ?? "")));
+  const csv = [header.join(","), ...data.map(row => row.map(escapeCSV).join(","))].join("\n");
+  return csv;
+}
+function escapeCSV(val){
+  const s = String(val);
+  return /[",\n]/.test(s) ? `"${s.replace(/"/g,'""')}"` : s;
+}
+
+// ---------- summary / APA ----------
+const mean = (xs) => xs.length ? xs.reduce((a,b)=>a+b,0)/xs.length : 0;
+const sd = (xs) => { if (xs.length < 2) return 0; const m = mean(xs); const v = xs.reduce((s,x)=>s+(x-m)*(x-m),0)/(xs.length-1); return Math.sqrt(v); };
+const round2 = (x) => (Math.round(x*100)/100).toFixed(2);
+
+function computeSummary(rows){
+  const n = rows.length;
+  const benign = rows.filter(r=> r.chosen_valence==="benign");
+  const threat = rows.filter(r=> r.chosen_valence==="threat");
+  const nb = benign.length, nt = threat.length;
+  const pb = n ? nb/n : 0, pt = n ? nt/n : 0;
+
+  const rt_b = benign.map(r=>r.rt_choice_ms);
+  const rt_t = threat.map(r=>r.rt_choice_ms);
+  const conf_b = benign.map(r=>r.confidence);
+  const conf_t = threat.map(r=>r.confidence);
+
+  const pattern = pb > 0.55 ? "positive (benign-leaning)"
+                 : pb < 0.45 ? "negative (threat-leaning)"
+                 : "mixed / neutral";
+
+  return {
+    n, nb, nt, pb, pt,
+    rt_b_m: mean(rt_b), rt_b_sd: sd(rt_b),
+    rt_t_m: mean(rt_t), rt_t_sd: sd(rt_t),
+    conf_b_m: mean(conf_b), conf_t_m: mean(conf_t),
+    pattern
+  };
+}
+
+function buildApaParagraph(s){
+  return `In an online interpretation task with ${s.n} ambiguous partner-related health scenarios, 
+the participant selected benign completions on ${s.nb} trials (p = ${round2(s.pb)}), 
+and threat completions on ${s.nt} trials (p = ${round2(s.pt)}). 
+Reaction times are reported separately for benign and threat trials. 
+Mean confidence (1–5) was ${round2(s.conf_b_m)} for benign choices and ${round2(s.conf_t_m)} for threat choices. 
+Overall, the pattern suggests a ${s.pattern} interpretation tendency.`;
+}
+
+function renderResults(summary){
+  if (metaLine) metaLine.textContent = `Session ${sessionId}`;
+  if (m_n) m_n.textContent = summary.n;
+  if (m_benign) m_benign.textContent = summary.nb;
+  if (m_threat) m_threat.textContent = summary.nt;
+  if (m_prop_benign) m_prop_benign.textContent = round2(summary.pb);
+  if (m_prop_threat) m_prop_threat.textContent = round2(summary.pt);
+  if (m_rt_b_m) m_rt_b_m.textContent = Math.round(summary.rt_b_m);
+  if (m_rt_b_sd) m_rt_b_sd.textContent = Math.round(summary.rt_b_sd);
+  if (m_rt_t_m) m_rt_t_m.textContent = Math.round(summary.rt_t_m);
+  if (m_rt_t_sd) m_rt_t_sd.textContent = Math.round(summary.rt_t_sd);
+  if (m_conf_b_m) m_conf_b_m.textContent = round2(summary.conf_b_m);
+  if (m_conf_t_m) m_conf_t_m.textContent = round2(summary.conf_t_m);
+  if (m_pattern) m_pattern.textContent = summary.pattern;
+  if (apaText) apaText.innerHTML = buildApaParagraph(summary);
+}
+
+// ---------- Charts (robust, no growth) ----------
+const CHARTS = {}; // id -> Chart instance
+
+function safeChart(ctx, id, config){
+  if (!ctx) return;
+  if (CHARTS[id]) { try { CHARTS[id].destroy(); } catch(_){} }
+  // Lock device pixel ratio scaling to avoid bounce
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  ctx.getContext && ctx.getContext("2d"); // ensure 2d context exists
+  const chart = new Chart(ctx, {
+    ...config,
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      animation: { duration: 600 },
+      ...config.options
+    },
+    plugins: config.plugins || []
+  });
+  CHARTS[id] = chart;
+}
+
+function buildCharts(s, rows){
+  if (typeof Chart === "undefined") return;
+  const benignColor = cssVar("--primary", "#5dd2ff");
+  const threatColor = cssVar("--threat", "#ff6b6b");
+  const gridColor = "rgba(200,210,220,.16)";
+  const labelColor = cssVar("--ink", "#e9eef2");
+
+  // 1) Proportions
+  safeChart(ctxChoices, "choices", {
+    type: 'bar',
+    data: {
+      labels: ["Benign","Threat"],
+      datasets: [{
+        label: "Proportion",
+        data: [s.pb || 0, s.pt || 0],
+        backgroundColor: [benignColor, threatColor]
+      }]
+    },
+    options: {
+      scales: {
+        x: { ticks: { color: labelColor }, grid: { color: gridColor }},
+        y: { min: 0, max: 1, ticks: { color: labelColor }, grid: { color: gridColor } }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // 2) Reaction times
+  safeChart(ctxRT, "rt", {
+    type: 'bar',
+    data: {
+      labels: ["Benign","Threat"],
+      datasets: [{
+        label: "RT (ms)",
+        data: [s.rt_b_m || 0, s.rt_t_m || 0],
+        backgroundColor: [benignColor, threatColor]
+      }]
+    },
+    options: {
+      scales: {
+        x: { ticks: { color: labelColor }, grid: { color: gridColor }},
+        y: { beginAtZero: true, ticks: { color: labelColor }, grid: { color: gridColor } }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // 3) Confidence
+  safeChart(ctxConf, "conf", {
+    type: 'bar',
+    data: {
+      labels: ["Benign","Threat"],
+      datasets: [{
+        label: "Confidence (1–5)",
+        data: [s.conf_b_m || 0, s.conf_t_m || 0],
+        backgroundColor: [benignColor, threatColor]
+      }]
+    },
+    options: {
+      scales: {
+        x: { ticks: { color: labelColor }, grid: { color: gridColor }},
+        y: { min: 1, max: 5, ticks: { color: labelColor }, grid: { color: gridColor } }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+
+  // 4) Sequence strip
+  const seq = rows.map(r => r.chosen_valence === "benign" ? 1 : -1);
+  const colors = rows.map(r => r.chosen_valence === "benign" ? benignColor : threatColor);
+  safeChart(ctxSeq, "seq", {
+    type: 'bar',
+    data: {
+      labels: rows.map((_,i)=>i+1),
+      datasets: [{
+        data: seq,
+        backgroundColor: colors,
+        borderWidth: 0,
+        barPercentage: 1.0,
+        categoryPercentage: 1.0
+      }]
+    },
+    options: {
+      scales: {
+        x: { display: false },
+        y: { min: -1, max: 1, display: false }
+      },
+      plugins: { legend: { display: false } }
+    }
+  });
+}
+
+// ---------- Downloads & Actions ----------
+function resultsToPayload(){
+  return { session_id: sessionId, device: deviceInfo, summary: computeSummary(results), trials: results };
+}
+
+if (dlCsv) {
+  dlCsv.addEventListener("click", () => {
+    const csv = resultsToCSV(results);
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `ib_task_${sessionId}.csv`; a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+if (dlJson) {
+  dlJson.addEventListener("click", () => {
+    const blob = new Blob([JSON.stringify(resultsToPayload(), null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = `ib_task_${sessionId}.json`; a.click();
+    URL.revokeObjectURL(url);
+  });
+}
+if (copyApa) {
+  copyApa.addEventListener("click", async () => {
+    const tmp = document.createElement("div");
+    tmp.innerHTML = (apaText?.innerHTML || "").replace(/<[^>]+>/g, "");
+    const text = tmp.textContent || tmp.innerText || "";
+    await navigator.clipboard.writeText(text);
+    alert("APA paragraph copied to clipboard.");
+  });
+}
+if (savePng) {
+  savePng.addEventListener("click", () => {
+    const charts = ["choices","rt","conf","seq"].map(id => CHARTS[id]).filter(Boolean);
+    charts.forEach((ch, i) => {
+      const a = document.createElement("a");
+      a.href = ch.toBase64Image();
+      a.download = `ib_${sessionId}_chart_${i+1}.png`;
+      a.click();
     });
-  }
-
-  if (restartBtn) {
-    restartBtn.onclick = () => {
-      // shuffle and rerun
-      trials = shuffle(trials);
-      screens.results.style.display = "none";
-      screens.task.style.display = "block";
-      runTask();
-    };
-  }
+  });
 }
-
-// ---------- init ----------
-function start() {
-  screens.instructions.style.display = "none";
-  screens.task.style.display = "block";
-  trials = shuffle(trials); // new order each run
-  runTask();
+if (savePdf) {
+  savePdf.addEventListener("click", async () => {
+    const { jsPDF } = window.jspdf || {};
+    if (!window.html2canvas || !jsPDF) return alert("PDF libraries not loaded.");
+    const root = document.getElementById("reportRoot");
+    // Render DOM to canvas for a WYSIWYG report (APA + charts)
+    const canvas = await html2canvas(root, { backgroundColor: "#12141a", scale: 2 });
+    const img = canvas.toDataURL("image/png");
+    const pdf = new jsPDF({ unit: "pt", format: "a4" });
+    const pageW = pdf.internal.pageSize.getWidth();
+    const pageH = pdf.internal.pageSize.getHeight();
+    const ratio = Math.min(pageW / canvas.width, pageH / canvas.height);
+    const w = canvas.width * ratio;
+    const h = canvas.height * ratio;
+    const x = (pageW - w) / 2;
+    const y = 20;
+    pdf.addImage(img, "PNG", x, y, w, h);
+    pdf.save(`ib_task_report_${sessionId}.pdf`);
+  });
 }
-if (startBtn) startBtn.onclick = start;
+if (again) { again.addEventListener("click", () => location.reload()); }
 
-// ---------- demo scenarios (replace with your full set) ----------
-trials = [
-  {
-    id: "T1",
-    lines: [
-      "You call your partner, but they don’t answer.",
-      "You wonder why they are not picking up.",
-      "They usually answer quickly.",
-      "This time, it’s different..."
-    ],
-    positive: "They are busy in a meeting.",
-    threat: "They are ignoring you intentionally."
-  },
-  {
-    id: "T2",
-    lines: [
-      "Your partner is late coming home.",
-      "It’s getting dark outside.",
-      "They normally text you.",
-      "You start to think..."
-    ],
-    positive: "They got stuck in traffic.",
-    threat: "They are in an accident."
-  }
-];
+// ---------- begin button ----------
+const btnBegin = $("#btn-begin");
+if (btnBegin) { btnBegin.addEventListener("click", () => { showScreen("task"); startTask(); }); }
