@@ -20,6 +20,27 @@ const restartBtn = $("#restartBtn");
 const startBtn = $("#startBtn");
 const pidInput = $("#pid");
 
+function fixationShow() {
+  // display grid so CSS centers it; no layout jump
+  fixation.style.display = 'grid';
+}
+
+function fixationHide() {
+  fixation.style.display = 'none';
+}
+
+/**
+ * Show fixation for a given duration (ms), then auto-hide.
+ * Usage: await fixationBlink(700);
+ */
+async function fixationBlink(ms = 700) {
+  fixationShow();
+  await sleep(ms);
+  fixationHide();
+}
+
+
+
 // results page elements
 const metaLine = $("#metaLine");
 const m_n = $("#m_n");
@@ -94,9 +115,7 @@ function showScreen(name){
 }
 
 async function showFixation(ms = 700){
-  fixation.classList.add("show");     // shows the +
-  await sleep(ms);
-  fixation.classList.remove("show");  // hides the +
+  await fixationBlink(ms); // uses fixationShow/Hide under the hood
 }
 
 async function showScenarioLines(textLines){
@@ -126,6 +145,8 @@ function runTrial(trial, indexInBlock){
     hideAnswers();
     await showFixation(700);
 
+    fixationHide();
+ 
     // scenario
     scenarioBox.style.display = "block";
     await showScenarioLines(trial.lines);
