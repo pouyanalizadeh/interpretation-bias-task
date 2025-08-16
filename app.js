@@ -88,6 +88,13 @@ const trials = (window.SCENARIOS || []).map((s) => ({
   record: true
 }));
 
+const btnBegin = $("#btn-begin");
+if (btnBegin) {
+  btnBegin.addEventListener("click", () => {
+    showScreen("task");
+    startTask();
+  });
+}
 // ---------- state ----------
 let participantId = "";
 let sessionId = makeSessionId();
@@ -202,7 +209,17 @@ function runTrial(trial, indexInBlock){
 
 // ---------- start / finish ----------
 async function startTask(){
-  try{ if(document.fullscreenElement == null){ await document.documentElement.requestFullscreen(); fullscreenOK = 1; } }catch{ fullscreenOK = 0; }
+  // No PID field on the page → default to "anon"
+  participantId = (pidInput?.value || "anon");
+
+  try {
+    if (document.fullscreenElement == null) {
+      await document.documentElement.requestFullscreen();
+      fullscreenOK = 1;
+    }
+  } catch {
+    fullscreenOK = 0;
+  }
 
   showScreen("task");
   results = [];
@@ -456,8 +473,8 @@ async function copyApaToClipboard(){
 function printReport(){ window.print(); }
 
 // ---------- events ----------
-startBtn.addEventListener("click", startTask);
-pidInput.addEventListener("keydown", (e) => { if (e.key === "Enter") startTask(); });
+if (startBtn) startBtn.addEventListener("click", startTask);
+if (pidInput) pidInput.addEventListener("keydown", (e) => { if (e.key === "Enter") startTask(); });
 if (downloadBtn) downloadBtn.addEventListener("click", downloadCSV);
 if (restartBtn) restartBtn.addEventListener("click", () => location.reload());
 dlCsv.addEventListener("click", downloadCSV);
